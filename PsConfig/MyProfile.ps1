@@ -3,10 +3,20 @@ try
 {
     Import-Module oh-my-posh
     Set-Theme ParadoxE
+    $ThemeSettings.Options.ConsoleTitle = $false
 }
 catch
 {
     Write-Host "[WARNING] Missing Module oh-my-posh"
+}
+
+if ($PSEdition -eq "Core")
+{
+    $Host.UI.RawUI.WindowTitle = "PowerShell Core " + $PSVersionTable.PSVersion.ToString() + " @ " + [environment]::OSVersion.VersionString
+}
+else
+{
+    $Host.UI.RawUI.WindowTitle = "Windows PowerShell " + $PSVersionTable.PSVersion.ToString() + " @ " + [environment]::OSVersion.VersionString
 }
 
 # Alias
