@@ -1,3 +1,5 @@
+##### ! Please remove the if-clauses in production to speed up opening ! #####
+
 # Import oh-my-posh
 try
 {

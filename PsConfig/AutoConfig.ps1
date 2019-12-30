@@ -5,22 +5,83 @@
 ##  1. [Plug-in] oh-my-posh & posh-git                                  ##
 ##    1.1 ParadoxE Theme                                                ##
 ##  2. [Config] User Profile                                            ##
+##  3. [Config] Console Color                                           ##
 ##  3. [Software] Chocolatey                                            ##
 ##    3.1 Color Tool                                                    ##
 ##    3.2 Sudo                                                          ##
-##    3.3 Screenfetch                                                   ##
 ##  4. [Font] Sarasa Mono                                               ##
 ##                                                                      ##
 ##########################################################################
 
-Write-Host '############################################'
-Write-Host '##                                        ##'
-Write-Host '##      PowerShell AutoConfig Script      ##'
-Write-Host '##                                        ##'
-Write-Host '############################################'
+##########################################################################
+# Functions
+
+function Invoke-Download
+{
+    param (
+        [Parameter(Mandatory = $true)]
+        [string]
+        $SourceUri,
+        
+        [System.UInt32]
+        $Retry = 3,
+        
+        [bool]
+        $UseProxy = $true
+    )
+    $WebClient = New-Object System.Net.WebClient
+    if ($UseProxy)
+    {
+        $Proxy = [System.Net.WebRequest]::GetSystemWebProxy()
+        $Proxy.Credentials = [System.Net.CredentialCache]::DefaultCredentials
+        $WebClient.Proxy = $Proxy
+    }
+    $FileName = $SourceUri.Substring($SourceUri.LastIndexOf('/') + 1)
+    $DestPath = (Resolve-Path -Path '.\').Path + '\' + $FileName
+
+    $AttemptCount = 0
+    Do
+    {
+        $AttemptCount++
+        $WebClient.DownloadFile($SourceUri, $DestPath)
+    } while (((Test-Path $DestPath) -eq $false) -and ($AttemptCount -le $Retry))
+}
+
+
+# Test-Administrator function from oh-my-posh
+function Test-Administrator
+{
+    if ($PSVersionTable.Platform -eq 'Unix')
+    {
+        return (whoami) -eq 'root'
+    }
+    elseif ($PSVersionTable.Platform -eq 'Windows')
+    {
+        return $false #TO-DO: find out how to distinguish this one
+    }
+    else
+    {
+        return ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] 'Administrator')
+    }
+}
+##########################################################################
+# Start of Script
+
+Write-Host '############################################' -ForegroundColor Blue
+Write-Host '##                                        ##' -ForegroundColor Blue
+Write-Host '##      PowerShell AutoConfig Script      ##' -ForegroundColor Blue
+Write-Host '##                                        ##' -ForegroundColor Blue
+Write-Host '############################################' -ForegroundColor Blue
 Write-Host ''
 
 Set-Location -Path $env:USERPROFILE
+
+if ($PSVersionTable.Platform -eq 'Unix')
+{
+    Write-Host 'This script can only be run on Windows OS' -ForegroundColor Red
+    Pause
+    Exit
+}
 
 Write-Host '[Info] Testing Administrator'
 if (Test-Administrator)
@@ -36,7 +97,7 @@ else
     {
         if ($Continue.Equals('y') -or $Continue.Equals('Y'))
         {
-            Write-Host 'Continue to execute'
+            Write-Host 'Continue to execute' -ForegroundColor Yellow
             break
         }
         elseif ($Continue.Equals('n') -or $Continue.Equals('N'))
@@ -52,13 +113,11 @@ Write-Host '[Info] Installing oh-my-posh & posh-git'
 
 try
 {
-    Install-Module posh-git -Scope CurrentUser
-    Install-Module oh-my-posh -Scope CurrentUser
-    
+    Install-Module posh-git -Scope CurrentUser -Force -AllowClobber -ErrorAction Stop
+    Install-Module oh-my-posh -Scope CurrentUser -Force -AllowClobber -ErrorAction Stop
 }
 catch
 {
-    $Error
     Write-Host '[Error] Unable to Install Module' -ForegroundColor Red
     Write-Host 'Script Aborted' -ForegroundColor Red
     Pause
@@ -161,42 +220,49 @@ $sl.Colors.WithBackgroundColor = [ConsoleColor]::Magenta
 $sl.Colors.VirtualEnvBackgroundColor = [System.ConsoleColor]::Red
 $sl.Colors.VirtualEnvForegroundColor = [System.ConsoleColor]::White
 '@
-$PoshThemePEPath = $env:USERPROFILE + '\Documents\WindowsPowerShell\PoshThemes\ParadoxE.psm1'
+$PoshThemePEPath = $env:USERPROFILE + '\Documents\WindowsPowerShell\PoshThemes\'
+if (!(Test-Path $PoshThemePEPath))
+{
+    New-Item -Path $PoshThemePEPath -ItemType Directory
+}
+$PoshThemePEPath += 'ParadoxE.psm1'
 Out-File -FilePath $PoshThemePEPath -Encoding utf8 -InputObject $PoshThemePE
 
 Write-Host '[Info] Writing to User PowerShell Profile'
-$ProfilePath = $env:USERPROFILE + '\Documents\WindowsPowerShell\Profile.ps1'
+if ($PSEdition -eq "Core")
+{
+    $ProfilePath = $env:USERPROFILE + '\Documents\PowerShell\'
+    $HostTitle = "PowerShell Core "
+}
+else 
+{
+    $ProfilePath = $env:USERPROFILE + '\Documents\WindowsPowerShell\'
+    $HostTitle = "Windows PowerShell "
+}
+if (!(Test-Path -Path $ProfilePath))
+{
+    New-Item -Path $ProfilePath -ItemType Directory
+}
+$ProfilePath += 'Microsoft.PowerShell_profile.ps1'
 $Profile = @'
 Import-Module oh-my-posh
 Set-Theme ParadoxE
+$ThemeSettings.Options.ConsoleTitle = $false
+
 # Alias
-$PathVsCode = $Env:USERPROFILE + "/APPDATA/Local/Programs/Microsoft VS Code/Code.exe"
-$PathVsCodeProg = $Env:ProgramFiles + "/Microsoft VS Code/Code.exe"
+'@
+$PathVsCode = $env:USERPROFILE + '\AppData\Local\Programs\Microsoft VS Code\Code.exe'
+$PathNpp = $env:SystemDrive + 'C:\Program Files (x86)\Notepad++\notepad++.exe'
 if (Test-Path -Path $PathVsCode)
 {
-    New-Alias -Name vscode -Value $PathVsCode -Description "Visual Studio Code"
+    $Profile += "New-Alias -Name vscode -Value '$PathVsCode' -Description 'Visual Studio Code'"
 }
-elseif (Test-Path -Path $PathVsCodeProg)
+if (Test-Path -Path $PathVsCode)
 {
-    Write-Host "[INFO] Visual Studio Code (User) Not Exist"    
-    Write-Host "[INFO] Falling Back..."
-    New-Alias -Name vscode -Value $PathVsCodeProg -Description "Visual Studio Code"
-}
-else
-{
-    Write-Host "[WARNING] Visual Studio Code Not Exist"
+    $Profile += "New-Alias -Name npp -Value '$PathNpp' -Description 'Notepad++'"
 }
 
-$PathNpp = ${Env:ProgramFiles(x86)} + "/Notepad++/notepad++.exe"
-if (Test-Path -Path $PathNpp)
-{
-    New-Alias -Name npp -Value $PathNpp -Description "Notepad++"
-}
-else
-{
-    Write-Host "[WARNING] Notepad++ Not Exist"
-}
-
+@'
 # Welcome
 Write-Host @"
 
@@ -211,15 +277,54 @@ __/\\\\\\\\\\\\\_____________________/\\\\\\\\\\\____/\\\_________
         _\///_________________\/////_______\///////////_____\///____\///__
 
 "@ -ForegroundColor Cyan
+
 '@
+$Profile += '$Host.UI.RawUI.WindowTitle = ' + "'$HostTitle' + " + ' $PSVersionTable.PSVersion.ToString() + " @ " + [environment]::OSVersion.VersionString'
 Out-File -FilePath $ProfilePath -Encoding utf8 -InputObject $Profile
 
 Write-Host '[Info] Downloading ColorTool'
-Invoke-WebRequest -Uri "https://github.com/microsoft/terminal/releases/download/1904.29002/ColorTool.zip" -OutFile ".\ColorTool.zip"
+Invoke-Download -SourceUri "https://github.com/microsoft/terminal/releases/download/1904.29002/ColorTool.zip" -Retry 3
 Expand-Archive -Path .\ColorTool.zip -DestinationPath .\ColorTool
 
+Write-Host '[Info] Writing Theme File'
+$OneHalfLightE = @'
+[table]
+DARK_BLACK = 55,57,66
+DARK_BLUE = 0,132,188
+DARK_GREEN = 79,161,79
+DARK_CYAN = 9,150,179
+DARK_RED = 228,86,73
+DARK_MAGENTA = 166,37,164
+DARK_YELLOW = 192,132,0
+DARK_WHITE = 250,250,250
+BRIGHT_BLACK = 97,97,97
+BRIGHT_BLUE = 97,175,239
+BRIGHT_GREEN = 152,195,121
+BRIGHT_CYAN = 86,181,193
+BRIGHT_RED = 223,108,117
+BRIGHT_MAGENTA = 197,119,221
+BRIGHT_YELLOW = 228,192,122
+BRIGHT_WHITE = 255,255,255
+
+[screen]
+FOREGROUND = BRIGHT_BLUE
+BACKGROUND = DARK_BLACK
+
+[popup]
+FOREGROUND = BRIGHT_WHITE
+BACKGROUND = BRIGHT_RED
+'@
+$CTThemePath = (Resolve-Path '.\').Path + '\ColorTool\OneHalfLightE.ini';
+
+# Attention: ColorTool.exe only recognize UTF-8 No BOM
+# For PowerShell Core 6, Out-File encoding has utf8NoBOM
+# Out-File -FilePath $CTThemePath -Encoding utf8NoBOM -InputObject $OneHalfLightE 
+# For Windows PowerShell 5, using .NET IO is the only way
+$Utf8NoBomEncoding = New-Object System.Text.UTF8Encoding $False
+[System.IO.File]::WriteAllLines($CTThemePath, $OneHalfLightE, $Utf8NoBomEncoding)
+
 Write-Host '[Info] Setting Color Theme'
-.\ColorTool\ColorTool.exe -b OneHalfLight.itermcolors
+.\ColorTool\ColorTool.exe -b $CTThemePath
 
 Write-Host '[Info] Removing ColorTool'
 Remove-Item -Path .\ColorTool.zip
@@ -227,13 +332,14 @@ Remove-Item -Path .\ColorTool -Force -Recurse
 
 try 
 {
-    Get-Command choco.exe
+    Get-Command choco.exe -ErrorAction Stop
 }
 catch
 {
     Write-Host '[Info] Chocolatey is not installed'
     Write-Host '[Info] Installing Chocolatey'
-    Set-ExecutionPolicy Bypass -Scope Process -Force; Invoke-Expression ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1'))
+    Set-ExecutionPolicy Bypass -Scope Process -Force
+    Invoke-Expression ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1'))
 }
 
 if ($IsAdmin)
@@ -241,7 +347,6 @@ if ($IsAdmin)
     Write-Host '[Info] Installing Softwares via Chocolatey'
     choco install ColorTool -y
     choco install Sudo -y
-    choco install Screenfetch -y
 }
 else
 {
@@ -267,24 +372,3 @@ while ($IsInstallFont = Read-Host -Prompt 'Install Font: Sarasa Mono? Y/N')
 Write-Host 'Execution Finished'
 Pause
 Exit
-
-function Invoke-Download
-{
-    param (
-        [Parameter(Mandatory = $true)]
-        [string]
-        $SourceUri,
-        [System.UInt32]
-        $Retry = 3
-    )
-    $WebClient = New-Object system.net.webclient
-    $FileName = $SourceUri.Substring($SourceUri.LastIndexOf('\') + 1)
-    $DestPath = ".\" + $FileName
-
-    $AttemptCount = 0
-    Do
-    {
-        $AttemptCount++
-        $WebClient.DownloadFile($SourceURI, $DestPath)
-    } while (((Test-Path $DestPath) -eq $false) -and ($AttemptCount -le $Retry))
-}
