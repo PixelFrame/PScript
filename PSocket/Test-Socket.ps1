@@ -1,4 +1,4 @@
-# PowerShell TCP Test Lab Script
+# PowerShell TCP Socket Test Script
 # by Liuyi Sun <v-liuysu@microsoft.com>
 
 # Parameters
@@ -44,7 +44,7 @@ function ServerOn
     catch
     {
         Write-Host "[ERR] Server Listen Socket Bind Failure" -ForegroundColor Red
-        Write-Host "[ERR] Port 20000 has been used" -ForegroundColor Red
+        Write-Host "[ERR] Port $LisPort has been used" -ForegroundColor Red
         Write-Host "[ERR] Please close this PowerShell instance and try again" -ForegroundColor Red
         Pause
         Exit
@@ -85,12 +85,12 @@ function CleanUp
     }
 }
 
-
+Clear-Host
 "++++++++++++++++++++++++++++++++ PowerShell TCP Lab ++++++++++++++++++++++++++++++++"
 ""
 if (($LisPort -lt 1) -or ($LisPort -gt 65536))
 {
-    Write-Host "Port Number Error" -ForegroundColor Red
+    Write-Host "[ERR] Port Number Error" -ForegroundColor Red
     Pause
     Exit
 }
@@ -139,7 +139,7 @@ foreach ($CltSocket in $CltSocketArray)
     {
         $CltSocket.Connect($RemoteEndpoint)
         ++$BackLogCnt
-        "[SRV/CLT] Backlog / Socket Connect: {0}/{1}" -f $BackLogCnt, $BackLogMax
+        "[SRV&CLT] Backlog & Socket Connect: {0}/{1}" -f $BackLogCnt, $BackLogMax
     }
     catch
     {
@@ -147,10 +147,10 @@ foreach ($CltSocket in $CltSocketArray)
         Write-Host "Connection Failed: " $_.Exception.Message -ForegroundColor Red
         if ($ErrCnt -gt 3)
         {
-            "More than 3 failures. Exiting..."
+            Write-Host "[ERR] More than 3 failures. Exiting..." -ForegroundColor Red
             Pause
             CleanUp -SrvSocket $SrvLisSocket -CltSocketArray $CltSocketArray
-            "Socket Clean Up Completed"
+            Write-Host "[INFO] Socket Clean Up Completed"
             Pause
             Exit
         }
@@ -176,12 +176,12 @@ foreach ($CltSocket in $CltSocketArray)
     try
     {     
         $CltSocket.Close()
+        "[SRV&CLT] Backlog & Socket Closed: {0}/{1}" -f $BackLogCnt, $BackLogMax
         --$BackLogCnt
-        "[SRV/CLT] Backlog / Socket Closed: {0}/{1}" -f $BackLogCnt, $BackLogMax
     }
     catch
     {
-        Write-Host "Close Failed: " + $_.Exception.Message -ForegroundColor Red
+        Write-Host "[ERR] Close Failed: " + $_.Exception.Message -ForegroundColor Red
     }    
 }
 
@@ -190,8 +190,8 @@ Pause
 foreach ($SrvAccSocket in $SrvAccSocketArray)
 {
     $SrvAccSocket.Close()
-    --$AccCnt
     "[SRV] Accept Socket Closed {0}/{1}" -f $AccCnt, $CltMax
+    --$AccCnt
 }
 
 Pause

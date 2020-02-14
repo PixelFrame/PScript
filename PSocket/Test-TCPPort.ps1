@@ -1,9 +1,26 @@
+# PowerShell TCP Port Test Script
+# by Liuyi Sun <v-liuysu@microsoft.com>
+
+# Parameters
+
+# [int] CltMax : Maximum Client Socket Number
+# [bool] SlowMode: Sleep when Sockets Connecting
+# [double] SlowModeInterval: Sleep Interval in Second
+# [string] RemoteAddress: IPv4 Address to be Tested
+# [int] RemotePort: Port to be Tested
+
+# This script calls .NET Framework Socket API
+
 [CmdletBinding()]
 param (
     [int]
     $CltMax = 200,
     [bool]
     $SlowMode = $false,
+    [double]
+    $SlowModeInterval = 1,
+    [string]
+    $RemoteAddress = "127.0.0.1",
     [int]
     $RemotePort = 80
 )
@@ -22,6 +39,16 @@ function ClientOn
     return $Socket
 }
 
+function Test-IPv4AddressString
+{
+    param (
+        [string]
+        $TestStr
+    )
+    $RegExIPv4Str = "^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$"
+    return $TestStr -match $RegExIPv4Str
+}
+
 function CleanUp
 {
     param (
@@ -35,9 +62,16 @@ function CleanUp
     }
 }
 
+if (!(Test-IPv4AddressString $RemoteAddress))
+{
+    Write-Host "[ERR] Invalid IPv4 Address" -ForegroundColor Red
+    Pause
+    Exit
+}
+
 if (($RemotePort -lt 1) -or ($RemotePort -gt 65536))
 {
-    Write-Host "Port Number Error" -ForegroundColor Red
+    Write-Host "[ERR] Port Number Error" -ForegroundColor Red
     Pause
     Exit
 }
@@ -45,7 +79,6 @@ if (($RemotePort -lt 1) -or ($RemotePort -gt 65536))
 "[CLT] Starting Clients"
 $CltSocketArray = @()
 
-$RemoteIP = "127.0.0.1"
 $RemoteAddress = [System.Net.IPAddress]::Parse($RemoteIP)
 $RemoteEndpoint = New-Object System.Net.IPEndPoint $RemoteAddress, $RemotePort
 
@@ -64,7 +97,7 @@ foreach ($CltSocket in $CltSocketArray)
 {
     try
     {
-        if ($SlowMode) { Start-Sleep -Seconds 1 }
+        if ($SlowMode) { Start-Sleep -Seconds $SlowModeInterval }
         $CltSocket.Connect($RemoteEndpoint)
         ++$ConCnt
         "[CLT] Socket Connect: {0}/{1}" -f $ConCnt, $CltMax
@@ -75,10 +108,10 @@ foreach ($CltSocket in $CltSocketArray)
         Write-Host "Connection Failed: " $_.Exception.Message -ForegroundColor Red
         if ($ErrCnt -gt 3)
         {
-            "More than 3 failures. Exiting..."
+            Write-Host "[ERR] More than 3 failures. Exiting..." -ForegroundColor Red
             Pause
             CleanUp -CltSocketArray $CltSocketArray
-            "Socket Clean Up Completed"
+            Write-Host "[INFO] Socket Clean Up Completed"
             Pause
             Exit
         }
@@ -87,6 +120,6 @@ foreach ($CltSocket in $CltSocketArray)
 
 Pause
 CleanUp -CltSocketArray $CltSocketArray
-"Socket Closed"
+"[CLT] Sockets Closed"
 Pause
 Exit
