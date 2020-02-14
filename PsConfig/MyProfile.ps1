@@ -12,13 +12,23 @@ catch
     Write-Host "[WARNING] Missing Module oh-my-posh"
 }
 
-if ($PSEdition -eq "Core")
+$Host.UI.RawUI.WindowTitle = $env:USERDOMAIN + '\'
+if (Test-Administrator)
 {
-    $Host.UI.RawUI.WindowTitle = "PowerShell Core " + $PSVersionTable.PSVersion.ToString() + " @ " + [environment]::OSVersion.VersionString
+    $Host.UI.RawUI.WindowTitle += 'Administrator: '
 }
 else
 {
-    $Host.UI.RawUI.WindowTitle = "Windows PowerShell " + $PSVersionTable.PSVersion.ToString() + " @ " + [environment]::OSVersion.VersionString
+    $Host.UI.RawUI.WindowTitle += $env:USERNAME + ': '
+}
+
+if ($PSEdition -eq "Core")
+{
+    $Host.UI.RawUI.WindowTitle += "PowerShell Core " + $PSVersionTable.PSVersion.ToString() + " @ " + [environment]::OSVersion.VersionString
+}
+else
+{
+    $Host.UI.RawUI.WindowTitle += "Windows PowerShell " + $PSVersionTable.PSVersion.ToString() + " @ " + [environment]::OSVersion.VersionString
 }
 
 # Alias

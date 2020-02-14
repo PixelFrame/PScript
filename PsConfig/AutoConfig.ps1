@@ -262,7 +262,7 @@ if (Test-Path -Path $PathVsCode)
     $Profile += "New-Alias -Name npp -Value '$PathNpp' -Description 'Notepad++'"
 }
 
-@'
+$Profile += @'
 # Welcome
 Write-Host @"
 
@@ -278,8 +278,18 @@ __/\\\\\\\\\\\\\_____________________/\\\\\\\\\\\____/\\\_________
 
 "@ -ForegroundColor Cyan
 
+$Host.UI.RawUI.WindowTitle = $env:USERDOMAIN + '\'
+if (Test-Administrator)
+{
+    $Host.UI.RawUI.WindowTitle += 'Administrator: '
+}
+else
+{
+    $Host.UI.RawUI.WindowTitle += $env:USERNAME + ': '
+}
 '@
-$Profile += '$Host.UI.RawUI.WindowTitle = ' + "'$HostTitle' + " + ' $PSVersionTable.PSVersion.ToString() + " @ " + [environment]::OSVersion.VersionString'
+
+$Profile += '$Host.UI.RawUI.WindowTitle += ' + "'$HostTitle' + " + ' $PSVersionTable.PSVersion.ToString() + " @ " + [environment]::OSVersion.VersionString'
 Out-File -FilePath $ProfilePath -Encoding utf8 -InputObject $Profile
 
 Write-Host '[Info] Downloading ColorTool'

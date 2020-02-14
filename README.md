@@ -6,8 +6,8 @@ by Pixel Frame
 - [Done] PDownloader > A simple PowerShell Download Script
 - [Planned] PowerExporter
 - [Planned] PowerMarker
-- [Planned] PSysinfoCollector
 
 ---
 
 - [InProgress] PsConfig/AutoConfig > Automation PowerShell Configuration Script
+- [Done] PSocket > PowerShell Socket Script
