@@ -86,8 +86,16 @@ function CleanUp
 }
 
 Clear-Host
-"++++++++++++++++++++++++++++++++ PowerShell TCP Lab ++++++++++++++++++++++++++++++++"
+"******************************** PowerShell Socket Test ********************************"
 ""
+"Configuration"
+"Server Listen At       : 0.0.0.0:$LisPort"
+"Server Maximum Backlog : $BackLogMax"
+"Client Maximum Number  : $CltMax"
+""
+"****************************************************************************************"
+Pause
+
 if (($LisPort -lt 1) -or ($LisPort -gt 65536))
 {
     Write-Host "[ERR] Port Number Error" -ForegroundColor Red

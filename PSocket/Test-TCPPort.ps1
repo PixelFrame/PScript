@@ -6,7 +6,7 @@
 # [int] CltMax : Maximum Client Socket Number
 # [bool] SlowMode: Sleep when Sockets Connecting
 # [double] SlowModeInterval: Sleep Interval in Second
-# [string] RemoteAddress: IPv4 Address to be Tested
+# [string] RemoteIP: IPv4 Address to be Tested
 # [int] RemotePort: Port to be Tested
 
 # This script calls .NET Framework Socket API
@@ -20,7 +20,7 @@ param (
     [double]
     $SlowModeInterval = 1,
     [string]
-    $RemoteAddress = "127.0.0.1",
+    $RemoteIP = "127.0.0.1",
     [int]
     $RemotePort = 80
 )
@@ -62,7 +62,19 @@ function CleanUp
     }
 }
 
-if (!(Test-IPv4AddressString $RemoteAddress))
+Clear-Host
+"******************************** PowerShell TCP Test ********************************"
+""
+"Configuration"
+"Test Endpoint At       : $($RemoteIP):$($RemotePort)"
+"Client Maximum Number  : $CltMax"
+"Slow Mode              : $SlowMode"
+"Slow Mode Interval     : $SlowModeInterval sec"
+""
+"*************************************************************************************"
+Pause
+
+if (!(Test-IPv4AddressString $RemoteIP))
 {
     Write-Host "[ERR] Invalid IPv4 Address" -ForegroundColor Red
     Pause
