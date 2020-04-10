@@ -1,0 +1,33 @@
+<VPNProfile>
+    <RememberCredentials>true</RememberCredentials>
+    <DnsSuffix>nvlab.local</DnsSuffix>
+    <RegisterDNS>true</RegisterDNS>
+    <AlwaysOn>false</AlwaysOn>
+    <TrustedNetworkDetection>nvlab.local</TrustedNetworkDetection>
+    <NativeProfile>
+        <Servers>nhv-ras.nvlab.pub</Servers>
+        <RoutingPolicyType>SplitTunnel</RoutingPolicyType>
+        <NativeProtocolType>IKEv2</NativeProtocolType>
+        <Authentication>
+            <MachineMethod>Certificate</MachineMethod>
+        </Authentication>
+        <CryptographySuite>
+            <AuthenticationTransformConstants>GCMAES256</AuthenticationTransformConstants>
+            <CipherTransformConstants>GCMAES256</CipherTransformConstants>
+            <EncryptionMethod>AES_GCM_256</EncryptionMethod>
+            <IntegrityCheckMethod>SHA1</IntegrityCheckMethod>            <!-- NOTE: SHA1 here is not a valid value -->
+            <DHGroup>Group14</DHGroup>
+            <PfsGroup>PFS2048</PfsGroup>
+        </CryptographySuite>
+    </NativeProfile>
+    <Route>
+        <Address>10.1.1.0</Address>
+        <PrefixSize>24</PrefixSize>
+    </Route>
+    <AppTrigger>
+        <App>
+            <Id>C:\windows\system32\ping.exe</Id>
+        </App>
+    </AppTrigger>
+    <!--<DeviceTunnel>true</DeviceTunnel>-->
+</VPNProfile>
