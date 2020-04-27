@@ -1,0 +1,84 @@
+{
+  "$schema": "https://aka.ms/terminal-profiles-schema",
+  "defaultProfile": "{574e775e-4f2a-5b96-ac1e-a2962a402336}",
+  "copyOnSelect": false,
+  "copyFormatting": true,
+  "profiles": {
+    "defaults": {
+      "fontFace": "Cascadia Code PL",
+      "fontSize": 8
+    },
+    "list": [
+      {
+        "guid": "{61c54bbd-c2c6-5271-96e7-009a87ff44bf}",
+        "name": "Windows PowerShell",
+        "commandline": "powershell.exe",
+        "hidden": false
+      },
+      {
+        "guid": "{0caa0dad-35be-5f56-a8ff-afceeeaa6101}",
+        "name": "Command Prompt",
+        "commandline": "cmd.exe",
+        "hidden": false
+      },
+      {
+        "guid": "{574e775e-4f2a-5b96-ac1e-a2962a402336}",
+        "hidden": false,
+        "name": "PowerShell",
+        "source": "Windows.Terminal.PowershellCore",
+        "useAcrylic": false,
+        "backgroundImage": "C:\\Program Files\\PowerShell\\7\\assets\\Powershell_black.ico",
+        "backgroundImageOpacity": 0.5,
+        "backgroundImageStretchMode": "none",
+        "backgroundImageAlignment": "bottomRight"
+      },
+      {
+        "guid": "{fd8f703e-9adf-4467-8497-b6090c94ab1e}",
+        "hidden": false,
+        "name": "PowerShell Acrylic",
+        "commandline": "pwsh.exe",
+        "acrylicOpacity": 0.7,
+        "icon": "C:\\Program Files\\PowerShell\\7\\assets\\Powershell_av_colors.ico",
+        "useAcrylic": true
+      },
+      {
+        "guid": "{a5a97cb8-8961-5535-816d-772efe0c6a3f}",
+        "hidden": false,
+        "name": "ArchWSL",
+        "source": "Windows.Terminal.Wsl"
+      },
+      {
+        "guid": "{b453ae62-4e3d-5e58-b989-0a998ec441b8}",
+        "hidden": false,
+        "name": "Azure Cloud Shell",
+        "source": "Windows.Terminal.Azure"
+      }
+    ]
+  },
+  "schemes": [],
+  "keybindings": [
+    {
+      "command": {
+        "action": "copy",
+        "singleLine": false
+      },
+      "keys": "ctrl+c"
+    },
+    {
+      "command": "paste",
+      "keys": "ctrl+v"
+    },
+    {
+      "command": "find",
+      "keys": "ctrl+shift+f"
+    },
+    {
+      "command": {
+        "action": "splitPane",
+        "split": "auto",
+        "splitMode": "duplicate"
+      },
+      "keys": "alt+shift+d"
+    }
+  ]
+}
