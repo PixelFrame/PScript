@@ -5,14 +5,14 @@
 # Crypto: Custom
 # Routing: SplitTunnel
 
-$ProfileName = 'NHV AppTriggerVPN'
+$ProfileName = 'NHV AlwaysOnVPN'
 $ProfileNameEscaped = $ProfileName -replace ' ', '%20'
 
 <#-- Define VPN ProfileXML --#>
 $ProfileXML = '<VPNProfile>
     <RememberCredentials>true</RememberCredentials>
     <DnsSuffix>nvlab.local</DnsSuffix>
-    <AlwaysOn>false</AlwaysOn>
+    <AlwaysOn>true</AlwaysOn>
     <TrustedNetworkDetection>nvlab.local</TrustedNetworkDetection>
     <NativeProfile>
         <Servers>nhv-ras.nvlab.pub</Servers>
@@ -34,12 +34,14 @@ $ProfileXML = '<VPNProfile>
         <Address>10.1.1.0</Address>
         <PrefixSize>24</PrefixSize>
     </Route>
+    <!--
     <AppTriggerList>
         <App>
             <Id>C:\windows\system32\ping.exe</Id>
         </App>
     </AppTriggerList>
-    <!--<DeviceTunnel>true</DeviceTunnel>-->
+    -->
+    <DeviceTunnel>true</DeviceTunnel>
 </VPNProfile>'
 
 <#-- Convert ProfileXML to Escaped Format --#>
@@ -108,8 +110,14 @@ catch [Exception]
 
 
 <#-- Set VPN CryptographySuite again to avoid any invalid value  --#>
-Set-VpnConnectionIPsecConfiguration -Name "NHV AppTriggerVPN" -EncryptionMethod GCMAES256 -AuthenticationTransformConstants GCMAES256 -CipherTransformConstants GCMAES256 -IntegrityCheckMethod SHA256 -PfsGroup PFS2048 -DHGroup Group14 -Force
-Add-VpnConnectionTriggerApplication -ConnectionName "NHV AppTriggerVPN" -ApplicationID "C:\Windows\System32\PING.EXE"
+Set-VpnConnectionIPsecConfiguration -Name 'NHV AlwaysOnVPN' -EncryptionMethod GCMAES256 -AuthenticationTransformConstants GCMAES256 -CipherTransformConstants GCMAES256 -IntegrityCheckMethod SHA256 -PfsGroup PFS2048 -DHGroup Group14 -Force
+Add-VpnConnectionTriggerApplication -ConnectionName 'NHV AlwaysOnVPN' -ApplicationID "C:\Windows\System32\PING.EXE"
+
+<#-- Specify the cert issuer --#>
+Set-Location Cert:\LocalMachine\Root
+$CARootCert = Get-ChildItem | Where-Object -FilterScript { $_.Subject -like 'CN=nvlab-NHV-PDC-CA*' }    # Get the certificate starting with CN=test-PDC-CA
+$CARootCert = $CARootCert[0]                                                                            # In case there’re 2 root certs with the same name
+Set-VpnConnection -MachineCertificateIssuerFilter $CARootCert -Name 'NHV AlwaysOnVPN'
 
 $Message = "Script Complete"
 Write-Host "$Message"
