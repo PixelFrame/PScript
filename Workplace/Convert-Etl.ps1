@@ -25,14 +25,17 @@ function ConvertCap
         $ETL
     )
 
+    $WinPS = $Env:SystemRoot + '\System32\WindowsPowerShell\v1.0\powershell.exe'
     $OutputTrace = $OutputPath + $ETL.BaseName + '-PktCap.cap'
     $SessionName = $ETL.BaseName + '_Conversion'
+    $Script = "try { Import-Module PEF } catch { throw 'PEF Module Not Found. Make sure Microsoft Message Analyzer is installed.' } 
+`$TraceSession = New-PefTraceSession -Mode Linear -Name $SessionName -SaveOnStop -Force -Path $OutputTrace; 
+Add-PefMessageSource -PEFSession `$Tracesession -Source $ETL; 
+Set-PefTraceFilter -PEFSession `$TraceSession -Filter 'ethernet'; 
+Start-PefTraceSession -PEFSession `$TraceSession; 
+"
 
-    $TraceSession = New-PefTraceSession -Mode Linear -Name $SessionName -SaveOnStop -Force -Path $OutputTrace
-
-    Add-PefMessageSource -PEFSession $Tracesession -Source $ETL
-    Set-PefTraceFilter -PEFSession $TraceSession -Filter "ethernet"
-    Start-PefTraceSession -PEFSession $TraceSession 
+    Start-Process -FilePath $WinPS -ArgumentList "-Command $Script"
 }
 
 function ConvertPcapng
@@ -42,7 +45,7 @@ function ConvertPcapng
         $ETL
     )
     $OutputTrace = $OutputPath + $ETL.BaseName + '-PktCap.pcapng'
-    etl2pcapng.exe $ETL $OutputTrace
+    Start-Process -FilePath etl2pcapng.exe -ArgumentList "$ETL $OutputTrace"
 }
 
 function ConvertNetsh
@@ -52,7 +55,7 @@ function ConvertNetsh
         $ETL
     )
     $OutputTxt = $OutputPath + $ETL.BaseName + '-FMT.txt'
-    netsh.exe trace convert input=$ETL output=$OutputTxt dump=txt tmfpath=$TMFPath
+    Start-Process -FilePath netsh.exe -ArgumentList "trace convert input=$ETL output=$OutputTxt dump=txt tmfpath=$TMFPath"
 }
 
 function DoConversion
@@ -75,14 +78,6 @@ function DoConversion
         }
         'CAP'
         {
-            try
-            {
-                Import-Module PEF
-            }
-            catch
-            {
-                throw 'PEF Module Not Found. Make sure Microsoft Message Analyzer is installed.'
-            }
             foreach ($token in $InputETL)
             {
                 ConvertCap $token
@@ -108,61 +103,8 @@ function DoConversion
     }
 }
 
-function DoConversionParallel
-{
-    switch ($Mode)
-    {
-        'TMF' 
-        {
-            if (Test-Path $TMFPath)
-            {
-                ForEach-Object -Parallel -InputObject $InputETL
-                {
-                    Write-Host "Converting $_.Name"
-                    ConvertNetsh $_
-                }
-            }
-            else
-            {
-                throw -Message 'Invalid TMF Path'
-            }
-        }
-        'CAP'
-        {
-            try
-            {
-                Import-Module PEF
-            }
-            catch
-            {
-                throw 'PEF Module Missing. Make sure Microsoft Message Analyzer is installed.'
-            }
-            ForEach-Object -Parallel -InputObject $InputETL
-            {
-                Write-Host "Converting $_.Name"
-                ConvertCap $_
-            }
-        }
-        'PCAPNG'
-        {
-            try
-            {
-                Get-Command etl2pcapng.exe -ErrorAction Stop
-            }
-            catch
-            {
-                throw 'etl2pcapng.exe Missing. Please download from https://github.com/Microsoft/etl2pcapng and put it in PATH.'
-            }
-            ForEach-Object -Parallel -InputObject $InputETL
-            {
-                Write-Host "Converting $_.Name"
-                ConvertPcapng $_
-            }
-        }
-        Default 
-        { Write-Host 'Nothing To Do' }
-    }
-}
+$SearchPath = $InputPath + '\*.etl'
+if ($Exclude -eq $false) { $Exclusion = '' }
 
 Write-Host @"
 -----------------------------------------
@@ -171,14 +113,20 @@ ETL Automation Convert
 Target Type: $Mode
 Source: $InputPath
 Destination: $OutputPath
+Exclusion: $Exclusion
 -----------------------------------------
 "@
 
 Pause
 
-$SearchPath = $InputPath + '\*.etl'
-if ($Exclude -eq $false) { $Exclusion = '' }
-$InputETL = Get-ChildItem -Path $SearchPath -Exclude $Exclusion -Recurse $Recurse
+if ($Recurse)
+{
+    $InputETL = Get-ChildItem -Path $SearchPath -Exclude $Exclusion -Recurse    
+}
+else
+{
+    $InputETL = Get-ChildItem -Path $SearchPath -Exclude $Exclusion
+}
 if ($null -eq $InputETL)
 {
     Write-Warning 'No ETL file found'
@@ -190,14 +138,6 @@ if (!(Test-Path $OutputPath))
     mkdir -Path $OutputPath
 }
 
-if ($Parallel)
-{
-    if ($PSVersionTable.PSVersion.Major -lt 7)
-    {
-        throw 'Parallel Mode is Only Available with PowerShell 7 or Later Version'
-    }
-    Write-Host 'Running in Parallel Mode'
-    DoConversionParallel
-}
-else
-{ DoConversion }
+DoConversion
+
+Write-Host 'Script Completed'
