@@ -1,0 +1,2 @@
+$DnsClients = Get-DnsClient | Where-Object -FilterScript { ($_.InterfaceAlias -notlike '*VPN*') -and ($_.InterfaceAlias -notlike '*loopback*') }
+$DnsClients | Set-DnsClient -RegisterThisConnectionsAddress $false
