@@ -1,6 +1,7 @@
 function Test-IPv4AddressString
 {
     param (
+        [Parameter(ValueFromPipeline)]
         [string]
         $TestStr
     )
@@ -10,7 +11,7 @@ function Test-IPv4AddressString
 function Convert-IPv4ToHexString
 {
     param (
-        [Parameter()]
+        [Parameter(ValueFromPipeline)]
         [string]
         $IpAddr
     )
@@ -33,7 +34,7 @@ function Convert-IPv4ToHexString
 function Convert-HexStringToIPv4
 {
     param (
-        [Parameter()]
+        [Parameter(ValueFromPipeline)]
         [string]
         $HexString
     )
@@ -51,11 +52,11 @@ function Convert-HexStringToIPv4
     return $res
 }
 
-function Convert-HexToIPv4
+function Convert-UInt32ToIPv4
 {
     param (
-        [Parameter()]
-        [int]
+        [Parameter(ValueFromPipeline)]
+        [UInt32]
         $Hex
     )
     
@@ -63,14 +64,54 @@ function Convert-HexToIPv4
     return Convert-HexStringToIPv4 -HexString $HexString
 }
 
-function Convert-IPv4ToHex
+function Convert-IPv4ToUInt32
 {
     param (
-        [Parameter()]
+        [Parameter(ValueFromPipeline)]
         [string]
         $IpAddr
     )
     
     $HexString = Convert-IPv4ToHexString -IpAddr $IpAddr
-    return [Convert]::ToInt32($HexString, 16)
+    return [Convert]::ToUInt32($HexString, 16)
 }
+
+function Convert-SubnetToIPv4Range
+{
+    param (
+        [Parameter(ValueFromPipeline)]
+        [string]
+        $Subnet,
+
+        [Switch]
+        $UIntOutput
+    )
+    
+    $NetworkId = $Subnet.Split('/')[0]
+    $MaskLen = [Convert]::ToInt32($Subnet.Split('/')[1])
+
+    $NetworkIdUInt32 = Convert-IPv4ToUInt32 -IpAddr $NetworkId
+    $Mask = [UInt32] 0
+    for ($i = 0; $i -lt 32; $i++)
+    {
+        $Mask = $Mask -shl 1
+        if ($MaskLen -gt 0)
+        {
+            ++$Mask
+            --$MaskLen
+        }
+    }
+
+    $StartingIP = $NetworkIdUInt32 -band $Mask
+    $EndingIP = $NetworkIdUInt32 -bor (-bnot $Mask)
+
+    if (!$UIntOutput)
+    {
+        $StartingIP = Convert-UInt32ToIPv4 $StartingIP
+        $EndingIP = Convert-UInt32ToIPv4 $EndingIP
+    }
+
+    return @($StartingIP, $EndingIP)
+}
+
+Export-ModuleMember -Function *
