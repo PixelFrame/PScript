@@ -11,8 +11,11 @@ foreach ($Port in $Ports)
 
 $LogFile = 'C:\PortMonitor\PortUsage-' + (Get-Date -Format 'yyyyMMdd-HHmmss') + '.log'
 
-'Ports:' | Out-File -FilePath $LogFile -Force
-$PortWithProcess | Format-Table -Property LocalPort, PID, ProcessName, PortState, CommandLine -AutoSize | Out-File -FilePath $LogFile -Append
-'' | Out-File -FilePath $LogFile -Append
-'Statics:' | Out-File -FilePath $LogFile -Append
-$PortWithProcess | Group-Object -Property ProcessName | Out-File -FilePath $LogFile -Append
+'Ports:' | Out-File -FilePath $LogFile -Encoding utf8 -Force 
+$PortWithProcess | Format-Table -Property LocalPort, PID, ProcessName, PortState, CommandLine -AutoSize | Out-File -FilePath $LogFile -Encoding utf8 -Append
+'' | Out-File -FilePath $LogFile -Encoding utf8 -Append
+'Statics:' | Out-File -FilePath $LogFile -Encoding utf8 -Append
+$PortWithProcess | Group-Object -Property ProcessName | Out-File -FilePath $LogFile -Encoding utf8 -Append
+
+$Logs = Get-ChildItem 'C:\PortMonitor\PortUsage*'
+if($Logs.Count -gt 50) {Remove-Item $Logs[0] -Force}
