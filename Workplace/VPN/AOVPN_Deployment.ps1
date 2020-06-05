@@ -1,11 +1,11 @@
-# NHV LAB ALWAYS ON VPN
+# Virtual Lab ALWAYS ON VPN
 
 # Tunnel: IKEv2
 # Authentication: Machine Certificate
 # Crypto: Custom
 # Routing: SplitTunnel
 
-$ProfileName = 'NHV AlwaysOnVPN'
+$ProfileName = 'VirtLab AlwaysOnVPN'
 $ProfileNameEscaped = $ProfileName -replace ' ', '%20'
 
 <#-- Define VPN ProfileXML --#>
@@ -13,9 +13,9 @@ $ProfileXML = '<VPNProfile>
     <RememberCredentials>true</RememberCredentials>
     <DnsSuffix>nvlab.local</DnsSuffix>
     <AlwaysOn>true</AlwaysOn>
-    <TrustedNetworkDetection>nvlab.local</TrustedNetworkDetection>
+    <TrustedNetworkDetection>vlab.int</TrustedNetworkDetection>
     <NativeProfile>
-        <Servers>nhv-ras.nvlab.pub</Servers>
+        <Servers>vlb-ras.vlab.ext</Servers>
         <RoutingPolicyType>SplitTunnel</RoutingPolicyType>
         <NativeProtocolType>IKEv2</NativeProtocolType>
         <Authentication>
@@ -25,7 +25,7 @@ $ProfileXML = '<VPNProfile>
             <AuthenticationTransformConstants>GCMAES256</AuthenticationTransformConstants>
             <CipherTransformConstants>GCMAES256</CipherTransformConstants>
             <EncryptionMethod>AES_GCM_256</EncryptionMethod>
-            <IntegrityCheckMethod>SHA1</IntegrityCheckMethod> <!-- NOTE: SHA1 here is not a valid value -->
+            <IntegrityCheckMethod>SHA256</IntegrityCheckMethod>
             <DHGroup>Group14</DHGroup>
             <PfsGroup>PFS2048</PfsGroup>
         </CryptographySuite>
@@ -40,8 +40,8 @@ $ProfileXML = '<VPNProfile>
             <Id>C:\windows\system32\ping.exe</Id>
         </App>
     </AppTriggerList>
-    -->
     <DeviceTunnel>true</DeviceTunnel>
+    -->
 </VPNProfile>'
 
 <#-- Convert ProfileXML to Escaped Format --#>
@@ -107,17 +107,6 @@ catch [Exception]
     Write-Host "$Message"
     exit
 }
-
-
-<#-- Set VPN CryptographySuite again to avoid any invalid value  --#>
-Set-VpnConnectionIPsecConfiguration -Name 'NHV AlwaysOnVPN' -EncryptionMethod GCMAES256 -AuthenticationTransformConstants GCMAES256 -CipherTransformConstants GCMAES256 -IntegrityCheckMethod SHA256 -PfsGroup PFS2048 -DHGroup Group14 -Force
-Add-VpnConnectionTriggerApplication -ConnectionName 'NHV AlwaysOnVPN' -ApplicationID "C:\Windows\System32\PING.EXE"
-
-<#-- Specify the cert issuer --#>
-Set-Location Cert:\LocalMachine\Root
-$CARootCert = Get-ChildItem | Where-Object -FilterScript { $_.Subject -like 'CN=nvlab-NHV-PDC-CA*' }    # Get the certificate starting with CN=test-PDC-CA
-$CARootCert = $CARootCert[0]                                                                            # In case there’re 2 root certs with the same name
-Set-VpnConnection -MachineCertificateIssuerFilter $CARootCert -Name 'NHV AlwaysOnVPN'
 
 $Message = "Script Complete"
 Write-Host "$Message"
