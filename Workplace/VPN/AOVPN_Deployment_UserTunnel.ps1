@@ -1,9 +1,10 @@
 # Virtual Lab ALWAYS ON VPN
 
-# Tunnel: IKEv2
+# Tunnel: Automatic (Strategy 14) 
 # Authentication: PEAP-TLS
-# Crypto: Custom
+# IPsec Crypto: Custom
 # Routing: SplitTunnel
+# Scope: User
 
 $ProfileName = 'VirtLab AlwaysOnVPN User Tunnel'
 $ProfileNameEscaped = $ProfileName -replace ' ', '%20'
@@ -147,6 +148,21 @@ catch [Exception]
     exit
 }
 
+<#-- Clean up registry keys --#>
+$SearchPattern = '*VPNv2/' + $ProfileNameEscaped + '*'
+$RegPath = 'HKLM:\SOFTWARE\Microsoft\EnterpriseResourceManager\Tracked\*\*\*'
+$RegItems = Get-Item -Path $RegPath
+
+foreach ($RegItem in $RegItems)
+{
+    $RegItem.Property | ForEach-Object {
+        if ($RegItem.GetValue($_) -like $SearchPattern)
+        {
+            Remove-ItemProperty -Name $_ -Path $RegPath
+        }
+    }
+}
+
 <#-- Create VPN Profile --#>
 try
 {
@@ -171,6 +187,7 @@ catch [Exception]
     exit
 }
 
+<#-- Change Strategy to 14 --#>>
 $RASPhone = $RASPhone = ( $env:ALLUSERSPROFILE ) + '\Microsoft\Network\Connections\Pbk\rasphone.pbk'
 $RasphoneContent = Get-Content $RASPhone
 $ReachedUserTunnel = $false

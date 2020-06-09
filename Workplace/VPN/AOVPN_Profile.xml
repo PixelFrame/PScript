@@ -1,11 +1,11 @@
 <VPNProfile>
     <RememberCredentials>true</RememberCredentials>
-    <DnsSuffix>nvlab.local</DnsSuffix>
+    <DnsSuffix>vlab.int</DnsSuffix>
     <RegisterDNS>true</RegisterDNS>
     <AlwaysOn>false</AlwaysOn>
-    <TrustedNetworkDetection>nvlab.local</TrustedNetworkDetection>
+    <TrustedNetworkDetection>vlab.int</TrustedNetworkDetection>
     <NativeProfile>
-        <Servers>nhv-ras.nvlab.pub</Servers>
+        <Servers>vpn.vlab.ext</Servers>
         <RoutingPolicyType>SplitTunnel</RoutingPolicyType>
         <NativeProtocolType>IKEv2</NativeProtocolType>
         <Authentication>

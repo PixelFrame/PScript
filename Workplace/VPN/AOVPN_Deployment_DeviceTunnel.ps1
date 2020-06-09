@@ -2,8 +2,9 @@
 
 # Tunnel: IKEv2
 # Authentication: Machine Certificate
-# Crypto: Custom
+# IPsec Crypto: Custom
 # Routing: SplitTunnel
+# Scope: Device / All users
 
 $ProfileName = 'VirtLab AlwaysOnVPN'
 $ProfileNameEscaped = $ProfileName -replace ' ', '%20'
@@ -11,7 +12,7 @@ $ProfileNameEscaped = $ProfileName -replace ' ', '%20'
 <#-- Define VPN ProfileXML --#>
 $ProfileXML = '<VPNProfile>
     <RememberCredentials>true</RememberCredentials>
-    <DnsSuffix>nvlab.local</DnsSuffix>
+    <DnsSuffix>vlab.int</DnsSuffix>
     <AlwaysOn>true</AlwaysOn>
     <TrustedNetworkDetection>vlab.int</TrustedNetworkDetection>
     <NativeProfile>

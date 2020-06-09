@@ -2,7 +2,7 @@
 param (
     [Parameter()]
     [string]
-    $OutPath = $env:SystemDrive + '\?PortMonitor',
+    $OutPath = $env:SystemDrive + '\PortMonitor',
 
     [Parameter()]
     [int]
