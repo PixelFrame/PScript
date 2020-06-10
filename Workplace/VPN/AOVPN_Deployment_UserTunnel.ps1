@@ -103,6 +103,7 @@ $ProfileXML =
         <Address>10.1.1.0</Address>
         <PrefixSize>24</PrefixSize>
     </Route>
+    <RegisterDns>true</RegisterDns>
     <DeviceTunnel>false</DeviceTunnel>
 </VPNProfile>
 '@
@@ -149,7 +150,7 @@ catch [Exception]
 }
 
 <#-- Clean up registry keys --#>
-$SearchPattern = '*VPNv2/' + $ProfileNameEscaped + '*'
+$SearchPattern = '*/Vendor/MSFT/VPNv2/' + $ProfileNameEscaped
 $RegPath = 'HKLM:\SOFTWARE\Microsoft\EnterpriseResourceManager\Tracked\*\*\*'
 $RegItems = Get-Item -Path $RegPath
 
@@ -158,7 +159,9 @@ foreach ($RegItem in $RegItems)
     $RegItem.Property | ForEach-Object {
         if ($RegItem.GetValue($_) -like $SearchPattern)
         {
-            Remove-ItemProperty -Name $_ -Path $RegPath
+            "Removed Registry $_ : " + $RegItem.GetValue($_)
+            $CurrentRegPath = $RegItem.Name.Replace('HKEY_LOCAL_MACHINE', 'HKLM:')
+            Remove-ItemProperty -Name $_ -Path $CurrentRegPath
         }
     }
 }
@@ -187,28 +190,37 @@ catch [Exception]
     exit
 }
 
-<#-- Change Strategy to 14 --#>>
-$RASPhone = $RASPhone = ( $env:ALLUSERSPROFILE ) + '\Microsoft\Network\Connections\Pbk\rasphone.pbk'
-$RasphoneContent = Get-Content $RASPhone
-$ReachedUserTunnel = $false
-$lineNum = 0
-foreach ($line in $RasphoneContent)
+<#-- Change Strategy to 14 --#>
+[string[]] $RasPhoneBooks += ( $env:ALLUSERSPROFILE ) + '\Microsoft\Network\Connections\Pbk\RasPhone.pbk'
+$RasPhoneBooks += ( $env:APPDATA ) + '\Microsoft\Network\Connections\Pbk\RasPhone.pbk'
+$RasPhoneBooks += ( $env:APPDATA ) + '\Microsoft\Network\Connections\Pbk\_hiddenPbk\RasPhone.pbk'
+
+foreach ($RasPhone in $RasPhoneBooks)
 {
-    if ($ReachedUserTunnel)
+    if (!(Test-Path $RasPhone)) { break }
+    $RasPhoneContent = Get-Content $RasPhone
+    $ReachedUserTunnel = $false
+    $lineNum = 0
+    foreach ($line in $RasPhoneContent)
     {
-        if ($line -like 'VpnStrategy=?')
+        if ($ReachedUserTunnel)
         {
-            $RasphoneContent[$lineNum] = 'VpnStrategy=14'
-            break
+            if ($line -like 'VpnStrategy=?')
+            {
+                $RasPhoneContent[$lineNum] = 'VpnStrategy=14'
+                'Changed VPN Strategy to 14'
+                break
+            }
         }
+        elseif ($line -eq ('[' + $ProfileName + ']'))
+        {
+            $ReachedUserTunnel = $true
+            "Found Profile in $RasPhone"
+        }
+        ++$lineNum
     }
-    elseif ($line -eq '[NHV AlwaysOnVPN User Tunnel]')
-    {
-        $ReachedUserTunnel = $true
-    }
-    ++$lineNum
+    $RasPhoneContent | Set-Content $RasPhone    
 }
-$RasphoneContent | Set-Content $RASPhone
 
 $Message = "Script Complete"
 Write-Host "$Message"

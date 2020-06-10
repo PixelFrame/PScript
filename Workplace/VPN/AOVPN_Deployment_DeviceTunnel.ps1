@@ -10,7 +10,9 @@ $ProfileName = 'VirtLab AlwaysOnVPN'
 $ProfileNameEscaped = $ProfileName -replace ' ', '%20'
 
 <#-- Define VPN ProfileXML --#>
-$ProfileXML = '<VPNProfile>
+$ProfileXML = 
+@'
+<VPNProfile>
     <RememberCredentials>true</RememberCredentials>
     <DnsSuffix>vlab.int</DnsSuffix>
     <AlwaysOn>true</AlwaysOn>
@@ -35,15 +37,10 @@ $ProfileXML = '<VPNProfile>
         <Address>10.1.1.0</Address>
         <PrefixSize>24</PrefixSize>
     </Route>
-    <!--
-    <AppTriggerList>
-        <App>
-            <Id>C:\windows\system32\ping.exe</Id>
-        </App>
-    </AppTriggerList>
     <DeviceTunnel>true</DeviceTunnel>
-    -->
-</VPNProfile>'
+    <RegiserDns>true</RegisterDns>
+</VPNProfile>
+'@
 
 <#-- Convert ProfileXML to Escaped Format --#>
 $ProfileXML = $ProfileXML -replace '<', '&lt;'
