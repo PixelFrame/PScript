@@ -6,10 +6,11 @@
 ##    1.1 ParadoxE Theme                                                ##
 ##  2. [Config] User Profile                                            ##
 ##  3. [Config] Console Color                                           ##
-##  3. [Software] Chocolatey                                            ##
-##    3.1 Color Tool                                                    ##
-##    3.2 Sudo                                                          ##
-##  4. [Font] Sarasa Mono                                               ##
+##  4. [Software] Chocolatey                                            ##
+##    4.0 Git                                                           ##
+##    4.1 Color Tool                                                    ##
+##    4.2 Sudo                                                          ##
+##    4.3 Cascadia Fonts                                                ##
 ##                                                                      ##
 ##########################################################################
 
@@ -124,7 +125,7 @@ catch
     Exit
 }
 
-Write-Host '[Info] Adding PoshTheme ParadoxE'
+Write-Host '[Info] Adding PoshTheme ParadoxCascadia'
 
 $PoshThemePE = 
 @'
@@ -205,9 +206,11 @@ function Write-Theme
 }
 
 $sl = $global:ThemeSettings #local settings
-$sl.PromptSymbols.StartSymbol =  ' ' + [char]::ConvertFromUtf32(0x266F) + ' '
-$sl.PromptSymbols.PromptIndicator = [char]::ConvertFromUtf32(0x276F)
+$sl.PromptSymbols.StartSymbol = ' PS '
+$sl.PromptSymbols.PromptIndicator = '▶'
+$sl.PromptSymbols.FailedCommandSymbol = '×'
 $sl.PromptSymbols.SegmentForwardSymbol = [char]::ConvertFromUtf32(0xE0B0)
+$sl.PromptSymbols.ElevatedSymbol = '#'
 $sl.Colors.SessionInfoBackgroundColor = [ConsoleColor]::Blue
 $sl.Colors.PromptForegroundColor = [ConsoleColor]::White
 $sl.Colors.PromptBackgroundColor = [ConsoleColor]::DarkCyan
@@ -225,7 +228,7 @@ if (!(Test-Path $PoshThemePEPath))
 {
     New-Item -Path $PoshThemePEPath -ItemType Directory
 }
-$PoshThemePEPath += 'ParadoxE.psm1'
+$PoshThemePEPath += 'ParadoxCascadia.psm1'
 Out-File -FilePath $PoshThemePEPath -Encoding utf8 -InputObject $PoshThemePE
 
 Write-Host '[Info] Writing to User PowerShell Profile'
@@ -244,39 +247,29 @@ if (!(Test-Path -Path $ProfilePath))
     New-Item -Path $ProfilePath -ItemType Directory
 }
 $ProfilePath += 'Microsoft.PowerShell_profile.ps1'
-$Profile = @'
+$ProfileContent = @'
 Import-Module oh-my-posh
-Set-Theme ParadoxE
+Set-Theme ParadoxCascadia
 $ThemeSettings.Options.ConsoleTitle = $false
 
 # Alias
 '@
 $PathVsCode = $env:USERPROFILE + '\AppData\Local\Programs\Microsoft VS Code\Code.exe'
-$PathNpp = $env:SystemDrive + 'C:\Program Files (x86)\Notepad++\notepad++.exe'
 if (Test-Path -Path $PathVsCode)
 {
-    $Profile += "New-Alias -Name vscode -Value '$PathVsCode' -Description 'Visual Studio Code'"
-}
-if (Test-Path -Path $PathVsCode)
-{
-    $Profile += "New-Alias -Name npp -Value '$PathNpp' -Description 'Notepad++'"
+    $ProfileContent += "New-Alias -Name vscode -Value '$PathVsCode' -Description 'Visual Studio Code'"
 }
 
-$Profile += @'
+$ProfileContent += @'
 # Welcome
 Write-Host @"
-
-__/\\\\\\\\\\\\\_____________________/\\\\\\\\\\\____/\\\_________        
- _\/\\\/////////\\\_________________/\\\/////////\\\_\/\\\_________       
-  _\/\\\_______\/\\\________________\//\\\______\///__\/\\\_________      
-   _\/\\\\\\\\\\\\\/______/\\\\\______\////\\\_________\/\\\_________     
-    _\/\\\/////////______/\\\///\\\_______\////\\\______\/\\\\\\\\\\__    
-     _\/\\\______________/\\\__\//\\\_________\////\\\___\/\\\/////\\\_   
-      _\/\\\_____________\//\\\__/\\\___/\\\______\//\\\__\/\\\___\/\\\_  
-       _\/\\\______________\///\\\\\/___\///\\\\\\\\\\\/___\/\\\___\/\\\_ 
-        _\///_________________\/////_______\///////////_____\///____\///__
-
-"@ -ForegroundColor Cyan
+ _       _______   ______  _____
+| |     / /  _/ | / / __ \/ ___/
+| | /| / // //  |/ / /_/ /\__ \ 
+| |/ |/ // // /|  / ____/___/ / 
+|__/|__/___/_/ |_/_/    /____/  
+                                
+"@ -ForegroundColor Blue
 
 $Host.UI.RawUI.WindowTitle = $env:USERDOMAIN + '\'
 if (Test-Administrator)
@@ -355,30 +348,31 @@ catch
 if ($IsAdmin)
 {
     Write-Host '[Info] Installing Softwares via Chocolatey'
+    choco install git -y
     choco install ColorTool -y
     choco install Sudo -y
+    choco install cascadiafonts -y
 }
 else
 {
     Write-Host '[Warning] No Administrator Privilege, skipping choco install' -ForegroundColor Yellow
 }
 
-while ($IsInstallFont = Read-Host -Prompt 'Install Font: Sarasa Mono? Y/N')
-{
-    if ($IsInstallFont.Equals('y') -or $IsInstallFont.Equals('Y')) 
-    {
-        Write-Host '[Info] Installing Fonts'
-        Invoke-Download -SourceUri "https://github.com/be5invis/Sarasa-Gothic/releases/download/v0.10.2/sarasa-gothic-ttf-0.10.2.7z" -Retry 3
-        Expand-Archive -Path ".\sarasa-gothic-ttf-0.10.2.7z" -DestinationPath ".\sarasa-gothic-ttf-0.10.2.7z"
-        break
-    }
-    elseif ($IsInstallFont.Equals('n') -or $IsInstallFont.Equals('N'))
-    {
-        Write-Host '[Info] Skipped Font Installation'
-        break
-    }
+# Write Registry to change font and color
+[string[]] $RegPaths += 'HKCU:\Console\%SystemRoot%_System32_WindowsPowerShell_v1.0_powershell.exe'
+$RegPaths += 'HKCU:\Console\%SystemRoot%_SysWOW64_WindowsPowerShell_v1.0_powershell.exe'
+$RegPaths += 'HKCU:\Console\C:_Program Files_PowerShell_7_pwsh.exe'
+foreach ($RegPath in $RegPaths)
+{ 
+    if (!(Test-Path $RegPath)) { New-Item $RegPath }
+
+    Set-ItemProperty -Path $RegPath -Name FaceName -Type STRING -Value "Cascadia Code PL"
+    Set-ItemProperty -Path $RegPath -Name FontSize -Type DWORD -Value 0x00120000
+    Set-ItemProperty -Path $RegPath -Name ScreenColors -Type DWORD -Value 0x00000001
+    Set-ItemProperty -Path $RegPath -Name CodePage -Type DWORD -Value 65001
 }
 
 Write-Host 'Execution Finished'
+Write-Host 'Restart Your Console Host and Check the Result'
 Pause
 Exit
