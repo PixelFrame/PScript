@@ -1,6 +1,6 @@
 # Using WMI
 
-$ProfileName = 'VirtLab AlwaysOnVPN User Tunnel'
+$ProfileName = '*'
 $ProfileNameEscaped = $ProfileName -replace ' ', '%20'
 
 $HKEY_LOCAL_MACHINE = 2147483650
