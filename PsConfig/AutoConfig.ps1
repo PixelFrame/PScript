@@ -207,8 +207,8 @@ function Write-Theme
 
 $sl = $global:ThemeSettings #local settings
 $sl.PromptSymbols.StartSymbol = ' PS '
-$sl.PromptSymbols.PromptIndicator = '▶'
-$sl.PromptSymbols.FailedCommandSymbol = '×'
+$sl.PromptSymbols.PromptIndicator = [char]::ConvertFromUtf32(0x25B6)
+$sl.PromptSymbols.FailedCommandSymbol = [char]::ConvertFromUtf32(0x00D7)
 $sl.PromptSymbols.SegmentForwardSymbol = [char]::ConvertFromUtf32(0xE0B0)
 $sl.PromptSymbols.ElevatedSymbol = '#'
 $sl.Colors.SessionInfoBackgroundColor = [ConsoleColor]::Blue
