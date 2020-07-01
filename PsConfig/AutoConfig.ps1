@@ -282,8 +282,8 @@ else
 }
 '@
 
-$Profile += '$Host.UI.RawUI.WindowTitle += ' + "'$HostTitle' + " + ' $PSVersionTable.PSVersion.ToString() + " @ " + [environment]::OSVersion.VersionString'
-Out-File -FilePath $ProfilePath -Encoding utf8 -InputObject $Profile
+$ProfileContent += '$Host.UI.RawUI.WindowTitle += ' + "'$HostTitle' + " + ' $PSVersionTable.PSVersion.ToString() + " @ " + [environment]::OSVersion.VersionString'
+Out-File -FilePath $ProfilePath -Encoding utf8 -InputObject $ProfileContent
 
 Write-Host '[Info] Downloading ColorTool'
 Invoke-Download -SourceUri "https://github.com/microsoft/terminal/releases/download/1904.29002/ColorTool.zip" -Retry 3
