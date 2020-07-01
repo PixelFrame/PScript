@@ -114,6 +114,32 @@ foreach ($RegPath in $RegPaths)
 }
 ```
 
+However, if the PowerShell instance is launched from a shortcut(.lnk), the lnk file itself would contain stand alone configurations that overwrite the registry settings. So after changing the registry, a refresh of the shortcuts will be necessary. The following script will refresh the shortcuts in Start Menu. It is also effective for the shortcut in Win+X Menu, although Win+X Menu has its own shortcut files but somehow it seems they are linked to Start Menu shortcuts.
+
+```PowerShell
+$WshShell = New-Object -ComObject WScript.Shell
+
+$Shortcut = $env:USERPROFILE + '\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Windows PowerShell\Windows PowerShell_New.lnk'
+$WshShortcut = $WshShell.CreateShortcut($Shortcut)
+$WshShortcut.TargetPath = '%SystemRoot%\system32\WindowsPowerShell\v1.0\powershell.exe'
+$WshShortcut.Description = 'Performs object-based (command-line) functions'
+$WshShortcut.IconLocation = '%SystemRoot%\system32\WindowsPowerShell\v1.0\powershell.exe,0'
+$WshShortcut.WorkingDirectory = '%HOMEDRIVE%%HOMEPATH%'
+$WshShortcut.Save()
+Remove-Item -Path "$env:USERPROFILE\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Windows PowerShell\Windows PowerShell.lnk"
+Rename-Item -Path "$env:USERPROFILE\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Windows PowerShell\Windows PowerShell_New.lnk" -NewName "Windows PowerShell.lnk"
+
+$Shortcut = $env:USERPROFILE + '\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Windows PowerShell\Windows PowerShell (x86)_New.lnk'
+$WshShortcut = $WshShell.CreateShortcut($Shortcut)
+$WshShortcut.TargetPath = '%SystemRoot%\syswow64\WindowsPowerShell\v1.0\powershell.exe'
+$WshShortcut.Description = 'Performs object-based (command-line) functions'
+$WshShortcut.IconLocation = '%SystemRoot%\syswow64\WindowsPowerShell\v1.0\powershell.exe,0'
+$WshShortcut.WorkingDirectory = '%HOMEDRIVE%%HOMEPATH%'
+$WshShortcut.Save()
+Remove-Item -Path "$env:USERPROFILE\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Windows PowerShell\Windows PowerShell (x86).lnk"
+Rename-Item -Path "$env:USERPROFILE\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Windows PowerShell\Windows PowerShell (x86)_New.lnk" -NewName "Windows PowerShell (x86).lnk"
+```
+
 ## AutoConfig
 
 The auto configuration script for all the steps above. Will use chocolatey to install git, Cascadia Code font and ColorTool.
