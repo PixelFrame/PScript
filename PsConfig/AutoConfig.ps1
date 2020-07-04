@@ -1,5 +1,5 @@
 ##########################################################################
-##             PowerShell Auto Configuration Script v1.0a               ##
+##             PowerShell Auto Configuration Script v1.1a               ##
 ##                                                          Pixel Frame ##
 ##                                                                      ##
 ##  1. [Plug-in] oh-my-posh & posh-git                                  ##
@@ -14,6 +14,7 @@
 ##  5. [Config] Terminal Settings                                       ##
 ##    5.1 Registry                                                      ##
 ##    5.2 Refresh Windows PowerShell Shortcuts                          ##
+##  6. [Config] Stub                                                    ##
 ##                                                                      ##
 ##########################################################################
 
@@ -238,12 +239,14 @@ Write-Host '[Info] Writing to User PowerShell Profile'
 if ($PSEdition -eq "Core")
 {
     $ProfilePath = $env:USERPROFILE + '\Documents\PowerShell\'
-    $HostTitle = "PowerShell Core "
+    $HostTitle = "PowerShell "
+    $IsCore = $true
 }
-else 
+else
 {
     $ProfilePath = $env:USERPROFILE + '\Documents\WindowsPowerShell\'
     $HostTitle = "Windows PowerShell "
+    $IsCore = $false
 }
 if (!(Test-Path -Path $ProfilePath))
 {
@@ -263,7 +266,22 @@ if (Test-Path -Path $PathVsCode)
     $ProfileContent += "New-Alias -Name vscode -Value '$PathVsCode' -Description 'Visual Studio Code'"
 }
 
+$ProfileContent += '# Environment Path'
+$ProfileContent += '$ScriptsPath = "; " + ' + "$ProfilePath\Scripts"
+$ProfileContent += '$Env:Path += $ScriptsPath'
+
 $ProfileContent += @'
+# Host Title
+$Host.UI.RawUI.WindowTitle = $env:USERDOMAIN + '\'
+if (Test-Administrator)
+{
+    $Host.UI.RawUI.WindowTitle += 'Administrator: '
+}
+else
+{
+    $Host.UI.RawUI.WindowTitle += $env:USERNAME + ': '
+}
+
 # Welcome
 Write-Host @"
  _       _______   ______  _____
@@ -274,15 +292,6 @@ Write-Host @"
                                 
 "@ -ForegroundColor Blue
 
-$Host.UI.RawUI.WindowTitle = $env:USERDOMAIN + '\'
-if (Test-Administrator)
-{
-    $Host.UI.RawUI.WindowTitle += 'Administrator: '
-}
-else
-{
-    $Host.UI.RawUI.WindowTitle += $env:USERNAME + ': '
-}
 '@
 
 $ProfileContent += '$Host.UI.RawUI.WindowTitle += ' + "'$HostTitle' + " + ' $PSVersionTable.PSVersion.ToString() + " @ " + [environment]::OSVersion.VersionString'
@@ -295,22 +304,22 @@ Expand-Archive -Path .\ColorTool.zip -DestinationPath .\ColorTool
 Write-Host '[Info] Writing Theme File'
 $OneHalfLightE = @'
 [table]
-DARK_BLACK = 55,57,66
-DARK_BLUE = 0,132,188
-DARK_GREEN = 79,161,79
-DARK_CYAN = 9,150,179
-DARK_RED = 228,86,73
-DARK_MAGENTA = 166,37,164
-DARK_YELLOW = 192,132,0
-DARK_WHITE = 250,250,250
-BRIGHT_BLACK = 97,97,97
-BRIGHT_BLUE = 97,175,239
-BRIGHT_GREEN = 152,195,121
-BRIGHT_CYAN = 86,181,193
-BRIGHT_RED = 223,108,117
-BRIGHT_MAGENTA = 197,119,221
-BRIGHT_YELLOW = 228,192,122
-BRIGHT_WHITE = 255,255,255
+DARK_BLACK = 55, 57, 66
+DARK_BLUE = 0, 132, 188
+DARK_GREEN = 79, 161, 79
+DARK_CYAN = 9, 150, 179
+DARK_RED = 228, 86, 73
+DARK_MAGENTA = 166, 37, 164
+DARK_YELLOW = 192, 132, 0
+DARK_WHITE = 250, 250, 250
+BRIGHT_BLACK = 97, 97, 97
+BRIGHT_BLUE = 97, 175, 239
+BRIGHT_GREEN = 152, 195, 121
+BRIGHT_CYAN = 86, 181, 193
+BRIGHT_RED = 223, 108, 117
+BRIGHT_MAGENTA = 197, 119, 221
+BRIGHT_YELLOW = 228, 192, 122
+BRIGHT_WHITE = 255, 255, 255
 
 [screen]
 FOREGROUND = BRIGHT_BLUE
@@ -323,10 +332,10 @@ BACKGROUND = BRIGHT_RED
 $CTThemePath = (Resolve-Path '.\').Path + '\ColorTool\OneHalfLightE.ini';
 
 # Attention: ColorTool.exe only recognize UTF-8 No BOM
-# For PowerShell Core 6, Out-File encoding has utf8NoBOM
+# For PowerShell 7, Out-File encoding utf8NoBOM is available
 # Out-File -FilePath $CTThemePath -Encoding utf8NoBOM -InputObject $OneHalfLightE 
 # For Windows PowerShell 5, using .NET IO is the only way
-$Utf8NoBomEncoding = New-Object System.Text.UTF8Encoding $False
+$Utf8NoBomEncoding = New-Object System.Text.UTF8Encoding $false
 [System.IO.File]::WriteAllLines($CTThemePath, $OneHalfLightE, $Utf8NoBomEncoding)
 
 Write-Host '[Info] Setting Color Theme'
@@ -377,27 +386,42 @@ foreach ($RegPath in $RegPaths)
 
 # Refresh Shortcuts
 
-$WshShell = New-Object -ComObject WScript.Shell
+if (!$IsCore)
+{
 
-$Shortcut = $env:USERPROFILE + '\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Windows PowerShell\Windows PowerShell_New.lnk'
-$WshShortcut = $WshShell.CreateShortcut($Shortcut)
-$WshShortcut.TargetPath = '%SystemRoot%\system32\WindowsPowerShell\v1.0\powershell.exe'
-$WshShortcut.Description = 'Performs object-based (command-line) functions'
-$WshShortcut.IconLocation = '%SystemRoot%\system32\WindowsPowerShell\v1.0\powershell.exe,0'
-$WshShortcut.WorkingDirectory = '%HOMEDRIVE%%HOMEPATH%'
-$WshShortcut.Save()
-Remove-Item -Path "$env:USERPROFILE\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Windows PowerShell\Windows PowerShell.lnk"
-Rename-Item -Path "$env:USERPROFILE\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Windows PowerShell\Windows PowerShell_New.lnk" -NewName "Windows PowerShell.lnk"
+    $WshShell = New-Object -ComObject WScript.Shell
 
-$Shortcut = $env:USERPROFILE + '\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Windows PowerShell\Windows PowerShell (x86)_New.lnk'
-$WshShortcut = $WshShell.CreateShortcut($Shortcut)
-$WshShortcut.TargetPath = '%SystemRoot%\syswow64\WindowsPowerShell\v1.0\powershell.exe'
-$WshShortcut.Description = 'Performs object-based (command-line) functions'
-$WshShortcut.IconLocation = '%SystemRoot%\syswow64\WindowsPowerShell\v1.0\powershell.exe,0'
-$WshShortcut.WorkingDirectory = '%HOMEDRIVE%%HOMEPATH%'
-$WshShortcut.Save()
-Remove-Item -Path "$env:USERPROFILE\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Windows PowerShell\Windows PowerShell (x86).lnk"
-Rename-Item -Path "$env:USERPROFILE\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Windows PowerShell\Windows PowerShell (x86)_New.lnk" -NewName "Windows PowerShell (x86).lnk"
+    $Shortcut = $env:USERPROFILE + '\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Windows PowerShell\Windows PowerShell_New.lnk'
+    $WshShortcut = $WshShell.CreateShortcut($Shortcut)
+    $WshShortcut.TargetPath = '%SystemRoot%\system32\WindowsPowerShell\v1.0\powershell.exe'
+    $WshShortcut.Description = 'Performs object-based (command-line) functions'
+    $WshShortcut.IconLocation = '%SystemRoot%\system32\WindowsPowerShell\v1.0\powershell.exe, 0'
+    $WshShortcut.WorkingDirectory = '%HOMEDRIVE%%HOMEPATH%'
+    $WshShortcut.Save()
+    Start-Sleep -Seconds 3
+    Remove-Item -Path "$env:USERPROFILE\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Windows PowerShell\Windows PowerShell.lnk"
+    Rename-Item -Path "$env:USERPROFILE\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Windows PowerShell\Windows PowerShell_New.lnk" -NewName "Windows PowerShell.lnk"
+
+    $Shortcut = $env:USERPROFILE + '\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Windows PowerShell\Windows PowerShell (x86)_New.lnk'
+    $WshShortcut = $WshShell.CreateShortcut($Shortcut)
+    $WshShortcut.TargetPath = '%SystemRoot%\syswow64\WindowsPowerShell\v1.0\powershell.exe'
+    $WshShortcut.Description = 'Performs object-based (command-line) functions'
+    $WshShortcut.IconLocation = '%SystemRoot%\syswow64\WindowsPowerShell\v1.0\powershell.exe, 0'
+    $WshShortcut.WorkingDirectory = '%HOMEDRIVE%%HOMEPATH%'
+    $WshShortcut.Save()
+    Start-Sleep -Seconds 3
+    Remove-Item -Path "$env:USERPROFILE\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Windows PowerShell\Windows PowerShell (x86).lnk"
+    Rename-Item -Path "$env:USERPROFILE\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Windows PowerShell\Windows PowerShell (x86)_New.lnk" -NewName "Windows PowerShell (x86).lnk"
+    
+}
+
+# Copy this script to Scripts folder
+
+if (!(Test-Path -Path $ProfilePath\Scripts))
+{
+    mkdir -Path $ProfilePath\Scripts
+}
+Copy-Item -Path $PSCommandPath -Destination $ProfilePath\Scripts
 
 Write-Host 'Execution Finished'
 Write-Host 'Restart Your Console Host and Check the Result'
