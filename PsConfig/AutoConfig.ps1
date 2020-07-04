@@ -1,5 +1,5 @@
 ##########################################################################
-##             PowerShell Auto Configuration Script v1.1a               ##
+##             PowerShell Auto Configuration Script v1.1b               ##
 ##                                                          Pixel Frame ##
 ##                                                                      ##
 ##  1. [Plug-in] oh-my-posh & posh-git                                  ##
@@ -42,7 +42,7 @@ function Invoke-Download
         $WebClient.Proxy = $Proxy
     }
     $FileName = $SourceUri.Substring($SourceUri.LastIndexOf('/') + 1)
-    $DestPath = (Resolve-Path -Path '.\').Path + '\' + $FileName
+    $DestPath = $PSScriptRoot + '\' + $FileName
 
     $AttemptCount = 0
     Do
@@ -114,24 +114,103 @@ else
     }
 }
 
-Write-Host '[Info] Installing oh-my-posh & posh-git'
+if ($PSEdition -eq "Core")
+{
+    $ProfilePath = $env:USERPROFILE + '\Documents\PowerShell\'
+    $HostTitle = "PowerShell "
+    $IsCore = $true
 
-try
-{
-    Install-Module posh-git -Scope CurrentUser -Force -AllowClobber -ErrorAction Stop
-    Install-Module oh-my-posh -Scope CurrentUser -Force -AllowClobber -ErrorAction Stop
+    Write-Host '[Info] Host is PowerShell'
 }
-catch
+else
 {
-    Write-Host '[Error] Unable to Install Module' -ForegroundColor Red
-    Write-Host 'Script Aborted' -ForegroundColor Red
-    Pause
-    Exit
+    $ProfilePath = $env:USERPROFILE + '\Documents\WindowsPowerShell\'
+    $HostTitle = "Windows PowerShell "
+    $IsCore = $false
+
+    Write-Host '[Info] Host is Windows PowerShell'
 }
+
+
+Write-Host '[Info] Installing/Upgrading oh-my-posh & posh-git'
+
+if ($null -eq (Get-Module -Name 'oh-my-posh'))
+{
+    try
+    {
+        Install-Module -Name 'posh-git' -Scope CurrentUser -Force -AllowClobber -ErrorAction Stop
+        Install-Module -Name 'oh-my-posh' -Scope CurrentUser -Force -AllowClobber -ErrorAction Stop
+    }
+    catch
+    {
+        Write-Host '[Error] Unable to Install Module' -ForegroundColor Red
+        Write-Host 'Script Aborted' -ForegroundColor Red
+        Pause
+        Exit
+    }
+}
+else
+{
+    Update-Module -Name 'posh-git' -Scope CurrentUser -Force
+    Update-Module -Name 'oh-my-posh' -Scope CurrentUser -Force
+}
+
+Write-Host '[Info] Writing to User PowerShell Profile'
+
+if (!(Test-Path -Path $ProfilePath))
+{
+    New-Item -Path $ProfilePath -ItemType Directory
+}
+$ProfilePath += 'Microsoft.PowerShell_profile.ps1'
+$ProfileContent = @'
+Import-Module oh-my-posh
+Set-Theme ParadoxCascadia
+$ThemeSettings.Options.ConsoleTitle = $false
+
+# Alias
+'@
+$PathVsCode = $env:USERPROFILE + '\AppData\Local\Programs\Microsoft VS Code\Code.exe'
+if (Test-Path -Path $PathVsCode)
+{
+    $ProfileContent += "New-Alias -Name vscode -Value '$PathVsCode' -Description 'Visual Studio Code'"
+}
+
+$ProfileContent += '# Environment Path'
+$ProfileContent += '$ScriptsPath = "; " + ' + "$ProfilePath\Scripts"
+$ProfileContent += '$Env:Path += $ScriptsPath'
+
+$ProfileContent += @'
+# Host Title
+$Host.UI.RawUI.WindowTitle = $env:USERDOMAIN + '\'
+if (Test-Administrator)
+{
+    $Host.UI.RawUI.WindowTitle += 'Administrator: '
+}
+else
+{
+    $Host.UI.RawUI.WindowTitle += $env:USERNAME + ': '
+}
+
+# Welcome
+Write-Host @"
+ _       _______   ______  _____
+| |     / /  _/ | / / __ \/ ___/
+| | /| / // //  |/ / /_/ /\__ \ 
+| |/ |/ // // /|  / ____/___/ / 
+|__/|__/___/_/ |_/_/    /____/  
+                                
+"@ -ForegroundColor Blue
+
+'@
+
+$ProfileContent += '$Host.UI.RawUI.WindowTitle += ' + "'$HostTitle' + " + ' $PSVersionTable.PSVersion.ToString() + " @ " + [environment]::OSVersion.VersionString'
+Out-File -FilePath $ProfilePath -Encoding utf8 -InputObject $ProfileContent
+
+
 
 Write-Host '[Info] Adding PoshTheme ParadoxCascadia'
 
-$PoshThemePE = 
+$PoshThemeContent = 
 @'
 #requires -Version 2 -Modules posh-git
 function Write-Theme
@@ -227,75 +306,13 @@ $sl.Colors.WithBackgroundColor = [ConsoleColor]::Magenta
 $sl.Colors.VirtualEnvBackgroundColor = [System.ConsoleColor]::Red
 $sl.Colors.VirtualEnvForegroundColor = [System.ConsoleColor]::White
 '@
-$PoshThemePEPath = $env:USERPROFILE + '\Documents\WindowsPowerShell\PoshThemes\'
-if (!(Test-Path $PoshThemePEPath))
+$PoshThemePath = $ProfilePath + '\PoshThemes\'
+if (!(Test-Path $PoshThemePath))
 {
-    New-Item -Path $PoshThemePEPath -ItemType Directory
+    New-Item -Path $PoshThemePath -ItemType Directory
 }
-$PoshThemePEPath += 'ParadoxCascadia.psm1'
-Out-File -FilePath $PoshThemePEPath -Encoding utf8 -InputObject $PoshThemePE
-
-Write-Host '[Info] Writing to User PowerShell Profile'
-if ($PSEdition -eq "Core")
-{
-    $ProfilePath = $env:USERPROFILE + '\Documents\PowerShell\'
-    $HostTitle = "PowerShell "
-    $IsCore = $true
-}
-else
-{
-    $ProfilePath = $env:USERPROFILE + '\Documents\WindowsPowerShell\'
-    $HostTitle = "Windows PowerShell "
-    $IsCore = $false
-}
-if (!(Test-Path -Path $ProfilePath))
-{
-    New-Item -Path $ProfilePath -ItemType Directory
-}
-$ProfilePath += 'Microsoft.PowerShell_profile.ps1'
-$ProfileContent = @'
-Import-Module oh-my-posh
-Set-Theme ParadoxCascadia
-$ThemeSettings.Options.ConsoleTitle = $false
-
-# Alias
-'@
-$PathVsCode = $env:USERPROFILE + '\AppData\Local\Programs\Microsoft VS Code\Code.exe'
-if (Test-Path -Path $PathVsCode)
-{
-    $ProfileContent += "New-Alias -Name vscode -Value '$PathVsCode' -Description 'Visual Studio Code'"
-}
-
-$ProfileContent += '# Environment Path'
-$ProfileContent += '$ScriptsPath = "; " + ' + "$ProfilePath\Scripts"
-$ProfileContent += '$Env:Path += $ScriptsPath'
-
-$ProfileContent += @'
-# Host Title
-$Host.UI.RawUI.WindowTitle = $env:USERDOMAIN + '\'
-if (Test-Administrator)
-{
-    $Host.UI.RawUI.WindowTitle += 'Administrator: '
-}
-else
-{
-    $Host.UI.RawUI.WindowTitle += $env:USERNAME + ': '
-}
-
-# Welcome
-Write-Host @"
- _       _______   ______  _____
-| |     / /  _/ | / / __ \/ ___/
-| | /| / // //  |/ / /_/ /\__ \ 
-| |/ |/ // // /|  / ____/___/ / 
-|__/|__/___/_/ |_/_/    /____/  
-                                
-"@ -ForegroundColor Blue
-
-'@
-
-$ProfileContent += '$Host.UI.RawUI.WindowTitle += ' + "'$HostTitle' + " + ' $PSVersionTable.PSVersion.ToString() + " @ " + [environment]::OSVersion.VersionString'
-Out-File -FilePath $ProfilePath -Encoding utf8 -InputObject $ProfileContent
+$PoshThemePath += 'ParadoxCascadia.psm1'
+Out-File -FilePath $PoshThemePath -Encoding utf8 -InputObject $PoshThemeContent
 
 Write-Host '[Info] Downloading ColorTool'
 Invoke-Download -SourceUri "https://github.com/microsoft/terminal/releases/download/1904.29002/ColorTool.zip" -Retry 3
@@ -329,7 +346,7 @@ BACKGROUND = DARK_BLACK
 FOREGROUND = BRIGHT_WHITE
 BACKGROUND = BRIGHT_RED
 '@
-$CTThemePath = (Resolve-Path '.\').Path + '\ColorTool\OneHalfLightE.ini';
+$CTThemePath = $PSScriptRoot + '\ColorTool\OneHalfLightE.ini';
 
 # Attention: ColorTool.exe only recognize UTF-8 No BOM
 # For PowerShell 7, Out-File encoding utf8NoBOM is available
@@ -388,7 +405,6 @@ foreach ($RegPath in $RegPaths)
 
 if (!$IsCore)
 {
-
     $WshShell = New-Object -ComObject WScript.Shell
 
     $Shortcut = $env:USERPROFILE + '\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Windows PowerShell\Windows PowerShell_New.lnk'
@@ -412,7 +428,6 @@ if (!$IsCore)
     Start-Sleep -Seconds 3
     Remove-Item -Path "$env:USERPROFILE\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Windows PowerShell\Windows PowerShell (x86).lnk"
     Rename-Item -Path "$env:USERPROFILE\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Windows PowerShell\Windows PowerShell (x86)_New.lnk" -NewName "Windows PowerShell (x86).lnk"
-    
 }
 
 # Copy this script to Scripts folder
