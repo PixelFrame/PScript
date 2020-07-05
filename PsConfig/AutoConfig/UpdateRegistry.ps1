@@ -3,7 +3,7 @@ $RegPaths += 'HKCU:\Console\%SystemRoot%_SysWOW64_WindowsPowerShell_v1.0_powersh
 $RegPaths += 'HKCU:\Console\C:_Program Files_PowerShell_7_pwsh.exe'
 foreach ($RegPath in $RegPaths)
 { 
-    if (!(Test-Path $RegPath)) { New-Item $RegPath }
+    if (!(Test-Path $RegPath)) { New-Item $RegPath | Out-Null }
 
     Set-ItemProperty -Path $RegPath -Name FaceName -Type STRING -Value "Cascadia Code PL"
     Set-ItemProperty -Path $RegPath -Name FontSize -Type DWORD -Value 0x00120000

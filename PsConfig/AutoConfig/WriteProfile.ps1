@@ -11,7 +11,7 @@ $ProfilePath = $env:USERPROFILE + '\Documents\' + $PSType
 
 if (!(Test-Path -Path $ProfilePath))
 {
-    New-Item -Path $ProfilePath -ItemType Directory
+    New-Item -Path $ProfilePath -ItemType Directory | Out-Null
 }
 $ProfilePath += '\Microsoft.PowerShell_profile.ps1'
 $ProfileContent = @'

@@ -1,6 +1,8 @@
+. $PSScriptRoot\Invoke-Download.ps1
+
 try
 {
-    Get-Command -Name 'ColorTool.exe' -ErrorAction Stop
+    Get-Command -Name 'ColorTool1.exe' -ErrorAction Stop | Out-Null
 }
 catch
 {
@@ -58,7 +60,7 @@ else
     ColorTool.exe -b $CTThemePath
 }
 
-Write-Host '[Info] Removing ColorTool'
+Write-Host '[Info] Removing ColorTool Temp Files'
 Remove-Item -Path $Env:USERPROFILE\OneHalfLightE.ini -ErrorAction SilentlyContinue
 Remove-Item -Path $Env:USERPROFILE\ColorTool.zip -ErrorAction SilentlyContinue
 Remove-Item -Path $Env:USERPROFILE\ColorTool -Force -Recurse -ErrorAction SilentlyContinue

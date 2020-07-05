@@ -6,15 +6,33 @@ param (
     $Mode = 'Full'
 )
 
+@'
+###################################################
+###                                             ###
+###       PowerShell Configuration Script       ###
+###                                      v1.3b  ###
+###                                             ###
+###################################################
+'@
+
 if ($PSEdition -eq 'Core')
 {
     $PSType = 'PowerShell'
-    Write-Host '[Info] Host is PowerShell'
+    Write-Host '[Info] Host is PowerShell ' -NoNewline
+    Write-Host $PSVersionTable.PSVersion.ToString()
 }
 else
 {
     $PSType = 'WindowsPowerShell'
-    Write-Host '[Info] Host is Windows PowerShell'
+    Write-Host '[Info] Host is Windows PowerShell ' -NoNewline
+    Write-Host $PSVersionTable.PSVersion.ToString()
+
+    $CodePage = ((chcp.com).Split(' '))[3]
+    if ($CodePage -eq 936)
+    {
+        Write-Host '[Warning] Code Page 936 is detect on Windows PowerShell!' -ForegroundColor Yellow
+        Write-Host '          Font configuration on shortcuts will not work properly. Consider to use Sarasa Mono instead.' -ForegroundColor Yellow
+    }
 }
 
 if (([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] 'Administrator'))
@@ -31,7 +49,7 @@ if (([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]:
             .\AutoConfig\InstallApps.ps1
             .\AutoConfig\UpdateRegistry.ps1
             .\AutoConfig\UpdateShortcuts.ps1
-            .\AutoConfig\WriteStub.ps1
+            .\AutoConfig\WriteStub.ps1 -PSType $PSType
             break
         }
         'Profile'
@@ -66,7 +84,7 @@ if (([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]:
         'StubOnly'
         {
             Write-Host '[Info] Stub Only Mode: Will copy this script to user PowerShell scripts folder'
-            .\AutoConfig\WriteStub.ps1
+            .\AutoConfig\WriteStub.ps1 -PSType $PSType
             break
         }
         Default {}

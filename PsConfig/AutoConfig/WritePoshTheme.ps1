@@ -108,7 +108,7 @@ $sl.Colors.VirtualEnvForegroundColor = [System.ConsoleColor]::White
 $PoshThemePath = $ProfilePath + '\PoshThemes\'
 if (!(Test-Path $PoshThemePath))
 {
-    New-Item -Path $PoshThemePath -ItemType Directory
+    New-Item -Path $PoshThemePath -ItemType Directory | Out-Null
 }
 $PoshThemePath += 'ParadoxCascadia.psm1'
 Out-File -FilePath $PoshThemePath -Encoding utf8 -InputObject $PoshThemeContent

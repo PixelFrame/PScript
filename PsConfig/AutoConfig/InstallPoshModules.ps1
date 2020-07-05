@@ -17,6 +17,6 @@ if ($null -eq (Get-Module -Name 'oh-my-posh'))
 }
 else
 {
-    Update-Module -Name 'posh-git' -Scope CurrentUser -Force
-    Update-Module -Name 'oh-my-posh' -Scope CurrentUser -Force
+    Update-Module -Name 'posh-git'
+    Update-Module -Name 'oh-my-posh'
 }

@@ -1,6 +1,6 @@
 try 
 {
-    Get-Command choco.exe -ErrorAction Stop
+    Get-Command choco.exe -ErrorAction Stop | Out-Null
 }
 catch
 {
@@ -11,7 +11,14 @@ catch
 }
 
 Write-Host '[Info] Installing Softwares via Chocolatey'
-choco install git -y -r
-choco install ColorTool -y -r
-choco install Sudo -y -r
-choco install cascadiafonts -y -r
+
+$ChocoInstalledApps = choco list --localonly
+
+if ($null -eq ($ChocoInstalledApps | Where-Object { $_.Contains('git') })) { choco install git -y -r }
+else { Write-Host '[Info] Git Installed. Skipping.' }
+if ($null -eq ($ChocoInstalledApps | Where-Object { $_.Contains('colortool') })) { choco install ColorTool -y -r }
+else { Write-Host '[Info] ColorTool Installed. Skipping.' }
+if ($null -eq ($ChocoInstalledApps | Where-Object { $_.Contains('Sudo') })) { choco install Sudo -y -r }
+else { Write-Host '[Info] Sudo Installed. Skipping.' }
+if ($null -eq ($ChocoInstalledApps | Where-Object { $_.Contains('cascadiafonts') })) { choco install cascadiafonts -y -r }
+else { Write-Host '[Info] Cascadia Fonts Installed. Skipping.' }

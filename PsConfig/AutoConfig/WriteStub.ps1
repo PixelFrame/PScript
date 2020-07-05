@@ -2,12 +2,13 @@
 param (
     [Parameter(Mandatory = $true)]
     [string]
-    $ProfilePath
+    $PSType
 )
 
+$ProfilePath = $env:USERPROFILE + '\Documents\' + $PSType
 if (!(Test-Path -Path $ProfilePath\Scripts))
 {
-    New-Item -Path $ProfilePath\Scripts -ItemType Directory 
+    New-Item -Path $ProfilePath\Scripts -ItemType Directory | Out-Null
 }
 Copy-Item -Path $PSScriptRoot\..\ConfigPS.ps1 -Destination $ProfilePath\Scripts
 Copy-Item -Path $PSScriptRoot -Destination $ProfilePath\Scripts\AutoConfig -Recurse
