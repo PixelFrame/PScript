@@ -4,6 +4,9 @@ function Invoke-Download
         [Parameter(Mandatory = $true)]
         [string]
         $SourceUri,
+
+        [string]
+        $Destination = $PSScriptRoot,
         
         [System.UInt32]
         $Retry = 3,
@@ -19,7 +22,7 @@ function Invoke-Download
         $WebClient.Proxy = $Proxy
     }
     $FileName = $SourceUri.Substring($SourceUri.LastIndexOf('/') + 1)
-    $DestPath = $PSScriptRoot + '\' + $FileName
+    $DestPath = $Destination + '\' + $FileName
 
     $AttemptCount = 0
     Do

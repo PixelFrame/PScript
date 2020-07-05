@@ -5,8 +5,8 @@ try
 catch
 {
     Write-Host '[Info] Downloading ColorTool'
-    Invoke-Download -SourceUri "https://github.com/microsoft/terminal/releases/download/1904.29002/ColorTool.zip" -Retry 3
-    Expand-Archive -Path .\ColorTool.zip -DestinationPath .\ColorTool
+    Invoke-Download -SourceUri "https://github.com/microsoft/terminal/releases/download/1904.29002/ColorTool.zip" -Destination $Env:USERPROFILE -Retry 3
+    Expand-Archive -Path $Env:USERPROFILE\ColorTool.zip -DestinationPath $Env:USERPROFILE\ColorTool
     $NoColorToolInstallation = $true
 }
 
@@ -39,7 +39,7 @@ BACKGROUND = DARK_BLACK
 FOREGROUND = BRIGHT_WHITE
 BACKGROUND = BRIGHT_RED
 '@
-$CTThemePath = $PSScriptRoot + '\OneHalfLightE.ini';
+$CTThemePath = $Env:USERPROFILE + '\OneHalfLightE.ini';
 
 # Attention: ColorTool.exe only recognize UTF-8 No BOM
 # For PowerShell 7, Out-File encoding utf8NoBOM is available
@@ -51,7 +51,7 @@ $Utf8NoBomEncoding = New-Object System.Text.UTF8Encoding $false
 Write-Host '[Info] Setting Color Theme'
 if ($NoColorToolInstallation)
 {
-    .\ColorTool\ColorTool.exe -b $CTThemePath
+    & $Env:USERPROFILE\ColorTool\ColorTool.exe -b $CTThemePath
 }
 else
 { 
@@ -59,6 +59,6 @@ else
 }
 
 Write-Host '[Info] Removing ColorTool'
-Remove-Item -Path .\OneHalfLightE.ini -ErrorAction SilentlyContinue
-Remove-Item -Path .\ColorTool.zip -ErrorAction SilentlyContinue
-Remove-Item -Path .\ColorTool -Force -Recurse -ErrorAction SilentlyContinue
+Remove-Item -Path $Env:USERPROFILE\OneHalfLightE.ini -ErrorAction SilentlyContinue
+Remove-Item -Path $Env:USERPROFILE\ColorTool.zip -ErrorAction SilentlyContinue
+Remove-Item -Path $Env:USERPROFILE\ColorTool -Force -Recurse -ErrorAction SilentlyContinue

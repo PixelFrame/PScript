@@ -161,7 +161,7 @@ if (!(Test-Path -Path $ProfilePath))
 {
     New-Item -Path $ProfilePath -ItemType Directory
 }
-$ProfilePath += 'Microsoft.PowerShell_profile.ps1'
+$ProfilePath += '\Microsoft.PowerShell_profile.ps1'
 $ProfileContent = @'
 Import-Module oh-my-posh
 Set-Theme ParadoxCascadia

@@ -13,8 +13,8 @@ param (
     $OutPath = '.\',
 
     [Parameter()]
-    [string[]]
-    $Files,
+    [string]
+    $FileFilter,
 
     [Parameter()]
     [string]
@@ -56,14 +56,14 @@ catch
 
 $Tag = $Response.tag_name
 
-if ($null -eq $Files)
+if ($null -eq $FileFilter)
 {
     $DownloadFiles = $Response.assets | Select-Object -Property name, download_count, size, created_at, updated_at, browser_download_url
 }
 else
 {
     $ResponseFiles = $Response.assets | Select-Object -Property name, download_count, size, created_at, updated_at, browser_download_url
-    $DownloadFiles = $ResponseFiles | Where-Object -FilterScript { $_.name -in $Files }
+    $DownloadFiles = $ResponseFiles | Where-Object -FilterScript { $_.name -like $FileFilter }
 }
 
 if ($DownloadFiles.Count -eq 0)
@@ -79,7 +79,7 @@ Write-Host '************************************************'
 
 if ((Read-Host -Prompt 'Continue? Y or exit') -notin @('Y', 'y')) { exit }
 
-ForEach-Object -InputObject $Files -Parallel {
+ForEach-Object -InputObject $DownloadFiles -Parallel {
     $AbsOutPath = $OutPath + $_.name.Substring(0, $_.name.LastIndexOf('.')) + '-' + $Tag + $_.name.Substring($_.name.LastIndexOf('.'))
     Invoke-WebRequest $_.browser_download_url -Out $AbsOutPath -Proxy $Proxy
 }

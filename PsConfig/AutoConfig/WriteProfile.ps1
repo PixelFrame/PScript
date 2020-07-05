@@ -13,7 +13,7 @@ if (!(Test-Path -Path $ProfilePath))
 {
     New-Item -Path $ProfilePath -ItemType Directory
 }
-$ProfilePath += 'Microsoft.PowerShell_profile.ps1'
+$ProfilePath += '\Microsoft.PowerShell_profile.ps1'
 $ProfileContent = @'
 # Set Posh Theme
 Import-Module oh-my-posh
@@ -65,4 +65,5 @@ else
     $HostTitle = 'PowerShell'
 }
 $ProfileContent += '$Host.UI.RawUI.WindowTitle += ' + "'$HostTitle' + " + ' $PSVersionTable.PSVersion.ToString() + " @ " + [environment]::OSVersion.VersionString'
+
 Out-File -FilePath $ProfilePath -Encoding utf8 -InputObject $ProfileContent
