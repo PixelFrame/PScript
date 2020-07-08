@@ -4,6 +4,7 @@ if ($null -eq (Get-Module -Name 'oh-my-posh'))
 {
     try
     {
+        Install-PackageProvider -Name NuGet -Force -ErrorAction Stop
         Install-Module -Name 'posh-git' -Scope CurrentUser -Force -AllowClobber -ErrorAction Stop
         Install-Module -Name 'oh-my-posh' -Scope CurrentUser -Force -AllowClobber -ErrorAction Stop
     }

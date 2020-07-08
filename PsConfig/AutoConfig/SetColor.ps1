@@ -2,7 +2,7 @@
 
 try
 {
-    Get-Command -Name 'ColorTool1.exe' -ErrorAction Stop | Out-Null
+    Get-Command -Name 'ColorTool.exe' -ErrorAction Stop | Out-Null
 }
 catch
 {
