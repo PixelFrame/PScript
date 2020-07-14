@@ -44,7 +44,7 @@ PktMon.exe filter add ARP -i 10.1.1.1 -d ARP
 PktMon.exe filter add TcpFlag -i 10.1.1.1 -t TCP SYN
 
 # TCP Port
-PktMon.exe filter add TcpFlag -i 10.1.1.1 -t TCP -p 445
+PktMon.exe filter add TcpPort -i 10.1.1.1 -t TCP -p 445
 
 # Subnet
 PktMon.exe filter add Subnet -i 10.1.1.0/24
@@ -58,14 +58,14 @@ PktMon.exe filter add Heartbeat -b
 ## Convert
 
 # Statistic, Timestamp, Metadata
-.\PktMon.exe etl2txt $Env:SystemDrive\NetTrace_w_TCPIP.etl -s -t -m
+PktMon.exe etl2txt $Env:SystemDrive\NetTrace_w_TCPIP.etl -s -t -m
 
 # TMF
-.\PktMon.exe etl2txt $Env:SystemDrive\NetTrace_w_TCPIP.etl -p $Env:SystemDrive\Users\Public\TMF -v 3
+PktMon.exe etl2txt $Env:SystemDrive\NetTrace_w_TCPIP.etl -o $Env:SystemDrive\NetTrace_w_TCPIP-FMT.txt -p $Env:SystemDrive\Users\Public\TMF -v 3
 
 # pcapng
 PktMon.exe etl2pcap .\PktCap.etl -o .\PktCap.pcapng
 PktMon.exe etl2pcap .\PktCap.etl -o .\PktCap-Dropped.pcapng -d
 
 # Decode Hex
-.\PktMon.exe hex2pkt -t Ethernet 00155D1F380100155D1F380208004500003C6AB20000800100000A0001330A00010108004D5A000100016162636465666768696A6B6C6D6E6F7071727374757677616263646566676869
+PktMon.exe hex2pkt -t Ethernet 00155D1F380100155D1F380208004500003C6AB20000800100000A0001330A00010108004D5A000100016162636465666768696A6B6C6D6E6F7071727374757677616263646566676869
