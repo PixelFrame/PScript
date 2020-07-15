@@ -1,28 +1,11 @@
 [CmdletBinding()]
 param (
-    [Parameter()]
-    [string]
-    $OutPath = 'C:\NetCap',
-
-    [Parameter()]
-    [int]
-    $NumOfFile = 10,
-
-    [Parameter()]
-    [int]
-    $Size = 512,
-
-    [Parameter()]
-    [string]
-    $CaptureFilter = '',
-
-    [Parameter()]
-    [int]
-    $Parser = 2,
-
-    [Parameter()]
-    [int]
-    $PullInterval = 1
+    [Parameter()] [string] $OutPath = 'C:\NetCap',
+    [Parameter()] [int]    $NumOfFile = 10,
+    [Parameter()] [int]    $Size = 512,
+    [Parameter()] [string] $CaptureFilter = '',
+    [Parameter()] [int]    $Parser = 2,
+    [Parameter()] [int]    $PullInterval = 1
 )
 
 if (!(Test-Path $OutPath))
@@ -85,12 +68,12 @@ while ($Continue)
     {
         if ([System.Console]::ReadKey().Key -eq 'F12')
         {
-            "F12 Pressed. Pinging 4.3.2.1 to stop capture."
+            Write-Host "F12 Pressed. Pinging 4.3.2.1 to stop capture."
             $Continue = $false
         }
         else
         {
-            "Press F12 to Stop Capture"
+            Write-Host "Press F12 to Stop Capture"
         }
     } 
     else
@@ -104,11 +87,11 @@ while ($Continue)
         }
         else
         {
-            "File Limit Not Reached. Sleeping for $PullInterval sec."
+            Write-Host '.' -NoNewline
             Start-Sleep -Milliseconds ($PullInterval * 1000 - 100)
         }
     }
     Start-Sleep -Milliseconds 100 # Key Read Interval to Save CPU Usage.
 }
 Start-Process $OutPath
-ping.exe 4.3.2.1
+ping.exe 4.3.2.1 -n 1 | Out-Null
