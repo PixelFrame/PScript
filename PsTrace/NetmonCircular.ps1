@@ -60,7 +60,7 @@ Write-Host " > Output Path:             $OutPath"
 Write-Host " > Num of Files to be Kept: $NumOfFile"
 Write-Host " > Size of Each File:       $Size MB"
 Write-Host " > Capture Filter:          $CaptureFilter"
-Write-Host " > Parser Profile ID:               $ParserId"
+Write-Host " > Parser Profile ID:       $ParserId"
 Write-Host " > Pull Interval:           $PullInterval sec"
 Write-Host "-------------------------------------------------"
 Write-Host ""
@@ -111,5 +111,39 @@ while ($Continue)
     }
     Start-Sleep -Milliseconds 100 # Key Read Interval to Save CPU Usage.
 }
+ping.exe 4.3.2.1 -n 1 -w 100 | Out-Null
+if (!$NmcapProcess.HasExited)
+{
+    $Warning = 
+    "WARNING:                     
+    NetMon has NOT exited yet!
+    This could be caused by high volume of traffic pending process.
+    If forcibly terminate NetMon, there will be data lost. 
+    If wait for NetMon finish processing, more capture files will be saved and you need to purge old captures manually."
+    Write-Host $Warning -ForegroundColor White -BackgroundColor Yellow
+    while ($true)
+    {
+        $ForceExit = Read-Host -Prompt "Do you want to forcibly terminate NetMon? Yes/No"
+        if (($ForceExit -eq 'yes') -or ($ForceExit -eq 'Yes'))
+        {
+            Stop-Process -Id $NmcapProcess.Id -Force
+            break
+        }
+        if (($ForceExit -eq 'no') -or ($ForceExit -eq 'No'))
+        {
+            Write-Host "Waiting for NetMon stopping. Keep pinging 4.3.2.1."
+            $PingProcess = Start-Process 'ping.exe' -ArgumentList '4.3.2.1 -t -w 100' -WindowStyle Hidden -PassThru
+            while (!$NmcapProcess.HasExited)
+            {
+                Write-Host '.' -NoNewline
+                Start-Sleep -Milliseconds 1000
+            }
+            if (!$PingProcess.HasExited)
+            {
+                Stop-Process -Id $PingProcess.Id -Force
+            }
+            break
+        }
+    }
+}
 Start-Process $OutPath
-ping.exe 4.3.2.1 -n 1 | Out-Null
