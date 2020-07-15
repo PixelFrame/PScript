@@ -4,7 +4,7 @@ param (
     [Parameter()] [int]    $NumOfFile = 10,
     [Parameter()] [int]    $Size = 512,
     [Parameter()] [string] $CaptureFilter = '',
-    [Parameter()] [int]    $Parser = 2,
+    [Parameter()] [int]    $ParserId = 2,
     [Parameter()] [int]    $PullInterval = 1
 )
 
@@ -60,7 +60,7 @@ Write-Host " > Output Path:             $OutPath"
 Write-Host " > Num of Files to be Kept: $NumOfFile"
 Write-Host " > Size of Each File:       $Size MB"
 Write-Host " > Capture Filter:          $CaptureFilter"
-Write-Host " > Parser ID:               $Parser"
+Write-Host " > Parser Profile ID:               $ParserId"
 Write-Host " > Pull Interval:           $PullInterval sec"
 Write-Host "-------------------------------------------------"
 Write-Host ""
@@ -68,7 +68,7 @@ Write-Host "Press Enter to Start Capture." -ForegroundColor White -BackgroundCol
 Write-Host "Press F12 to Stop Capture.   " -ForegroundColor White -BackgroundColor Green
 Read-Host
 
-$Argument = "/UseProfile 2 /Network * /Capture $CaptureFilter /file $OutPath\NetTraceNM.chn:" + $Size + "M /CaptureProcesses /StopWhen /Frame IPv4.Address == 4.3.2.1 AND ICMP"
+$Argument = "/UseProfile $Parser /Network * /Capture $CaptureFilter /file $OutPath\NetTraceNM.chn:" + $Size + "M /CaptureProcesses /StopWhen /Frame IPv4.Address == 4.3.2.1 AND ICMP"
 Write-Host "Calling NetMon" -ForegroundColor White -BackgroundColor Green
 Write-Host "CommandLine: $env:ProgramFiles\Microsoft Network Monitor 3\nmcap.exe $Argument" -ForegroundColor White -BackgroundColor Green
 $NmcapProcess = Start-Process -FilePath "$env:ProgramFiles\Microsoft Network Monitor 3\nmcap.exe" -ArgumentList $Argument -WindowStyle Hidden -PassThru
