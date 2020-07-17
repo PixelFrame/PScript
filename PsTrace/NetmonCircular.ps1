@@ -8,16 +8,44 @@ param (
     [Parameter()] [int]    $PullInterval = 1
 )
 
+function StopNmcap
+{
+    param(
+        [Parameter()] [Object] $NmProcess
+    )
+
+    Add-Type @"
+    using System;
+    using System.Runtime.InteropServices;
+    public class StartActivateProgramClass {
+        [DllImport("user32.dll")]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        public static extern bool SetForegroundWindow(IntPtr hWnd);
+    }
+"@
+
+    if ($NmProcess) 
+    {
+        $NmHandle = $NmProcess.Parent.MainWindowHandle
+        [void] [StartActivateProgramClass]::SetForegroundWindow($NmHandle)
+        
+        [void] [System.Reflection.Assembly]::LoadWithPartialName("System.Windows.Forms")
+        [System.Windows.Forms.SendKeys]::SendWait('X')
+    }
+}
+
 if (!(Test-Path "$env:ProgramFiles\Microsoft Network Monitor 3"))
 {
     Write-Host "Microsoft Network Monitor 3 Not Installed!" -ForegroundColor Red
     Write-Host "Download and Install NetMon at http://go.microsoft.com/fwlink/?linkid=220643" -ForegroundColor Red
+    Pause
     Exit
 }
 if (!(Get-NetAdapterBinding).ComponentID.Contains('ms_netmon'))
 {
     Write-Host "Microsoft Network Monitor 3 Driver is Not Bound on Any Network Adapter!" -ForegroundColor Red
     Write-Host "Reinstall NetMon or Launch the Script as Administrator and Try Again" -ForegroundColor Red
+    Pause
     Exit
 }
 if (!(Test-Path $OutPath))
@@ -29,6 +57,7 @@ if (!(Test-Path $OutPath))
     catch
     {
         Write-Host "Output path cannot be created!" -ForegroundColor Red
+        Pause
         Exit
     }
 }
@@ -64,14 +93,22 @@ Write-Host " > Parser Profile ID:       $ParserId"
 Write-Host " > Pull Interval:           $PullInterval sec"
 Write-Host "-------------------------------------------------"
 Write-Host ""
-Write-Host "Press Enter to Start Capture." -ForegroundColor White -BackgroundColor Green
-Write-Host "Press F12 to Stop Capture.   " -ForegroundColor White -BackgroundColor Green
+Write-Host "Press Enter to Start Capture." -ForegroundColor White -BackgroundColor DarkGreen
+Write-Host "Press F12 to Stop Capture.   " -ForegroundColor White -BackgroundColor DarkGreen
 Read-Host
 
-$Argument = "/UseProfile $Parser /Network * /Capture $CaptureFilter /file $OutPath\NetTraceNM.chn:" + $Size + "M /CaptureProcesses /StopWhen /Frame IPv4.Address == 4.3.2.1 AND ICMP"
-Write-Host "Calling NetMon" -ForegroundColor White -BackgroundColor Green
-Write-Host "CommandLine: $env:ProgramFiles\Microsoft Network Monitor 3\nmcap.exe $Argument" -ForegroundColor White -BackgroundColor Green
-$NmcapProcess = Start-Process -FilePath "$env:ProgramFiles\Microsoft Network Monitor 3\nmcap.exe" -ArgumentList $Argument -WindowStyle Hidden -PassThru
+$Argument = "/UseProfile $Parser /Network * /Capture $CaptureFilter /file $OutPath\NetTraceNM.chn:" + $Size + "M /StopWhen /Frame IPv4.Address == 4.3.2.1 AND ICMP /TerminateWhen /KeyPress X"
+if (([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator"))
+{
+    $Argument += ' /CaptureProcesses'
+}
+else
+{
+    Write-Host 'Not running as Administrator, Capture Process will not be enabled.' -ForegroundColor White -BackgroundColor Yellow
+}
+Write-Host "Calling NetMon" -ForegroundColor White -BackgroundColor DarkGreen
+Write-Host "CommandLine: $env:ProgramFiles\Microsoft Network Monitor 3\nmcap.exe $Argument" -ForegroundColor White -BackgroundColor DarkGreen
+$NmcapProcess = Start-Process -FilePath "$env:ProgramFiles\Microsoft Network Monitor 3\nmcap.exe" -ArgumentList $Argument -PassThru
 
 $Continue = $true
 while ($Continue)
@@ -93,7 +130,7 @@ while ($Continue)
         $TraceFiles = Get-ChildItem $OutPath\*.cap | Sort-Object -Property CreationTime
         if ($TraceFiles.Count -gt $NumOfFile)
         {
-            $Prompt = "`nPurging File: " + $TraceFiles[0] + "`n"
+            $Prompt = "`nPurging File: " + $TraceFiles[0]
             Write-Host $Prompt -ForegroundColor Yellow
             Remove-Item -Path $TraceFiles[0]
         }
@@ -106,12 +143,13 @@ while ($Continue)
     if ($NmcapProcess.HasExited) 
     {
         Write-Host "`nNMCap Process Exited Unexpectedly! Script Terminated!" -ForegroundColor Red
-        Write-Host "This could caused by an unexpected ICMP packet to/from IP address 4.3.2.1 or crash of NMCap process" -ForegroundColor Red
+        Write-Host "This could caused by an unexpected ICMP packet to/from IP address 4.3.2.1 or not running NMCap as Administrator (No bound interface is found)" -ForegroundColor Red
+        Pause
         Exit
     }
     Start-Sleep -Milliseconds 100 # Key Read Interval to Save CPU Usage.
 }
-ping.exe 4.3.2.1 -n 1 -w 100 | Out-Null
+ping.exe 4.3.2.1 -n 5 -w 100 | Out-Null
 if (!$NmcapProcess.HasExited)
 {
     $Warning = 
@@ -120,21 +158,30 @@ if (!$NmcapProcess.HasExited)
     This could be caused by high volume of traffic pending process.
     If forcibly terminate NetMon, there will be data lost. 
     If wait for NetMon finish processing, more capture files will be saved and you need to purge old captures manually."
-    Write-Host $Warning -ForegroundColor White -BackgroundColor Yellow
+    Write-Host $Warning -ForegroundColor White -BackgroundColor DarkYellow
     while ($true)
     {
-        $ForceExit = Read-Host -Prompt "Do you want to forcibly terminate NetMon? Yes/No"
+        $ForceExit = Read-Host -Prompt "Do you want to forcibly terminate NetMon? Yes/No (Default - No)"
         if (($ForceExit -eq 'yes') -or ($ForceExit -eq 'Yes'))
         {
-            Stop-Process -Id $NmcapProcess.Id -Force
+            StopNmcap -NmProcess $NmcapProcess
             break
         }
-        if (($ForceExit -eq 'no') -or ($ForceExit -eq 'No'))
+        if (($ForceExit -eq 'no') -or ($ForceExit -eq 'No') -or ($ForceExit -eq ''))
         {
-            Write-Host "Waiting for NetMon stopping. Keep pinging 4.3.2.1."
+            Write-Host "Waiting for NetMon stopping. Keep pinging 4.3.2.1. Press F12 to stop immediately."
+            Write-Host "WARNING: DO NOT forcibly stop this script at this stage, or you need to terminate the PING process and NMCap process manually!" -ForegroundColor White -BackgroundColor DarkYellow
             $PingProcess = Start-Process 'ping.exe' -ArgumentList '4.3.2.1 -t -w 100' -WindowStyle Hidden -PassThru
             while (!$NmcapProcess.HasExited)
             {
+                if ([console]::KeyAvailable)
+                {
+                    if ([System.Console]::ReadKey().Key -eq 'F12')
+                    {
+                        Write-Host "`nF12 Pressed. Terminate NMCap Process."
+                        StopNmcap -NmProcess $NmcapProcess
+                    }
+                }
                 Write-Host '.' -NoNewline
                 Start-Sleep -Milliseconds 1000
             }
