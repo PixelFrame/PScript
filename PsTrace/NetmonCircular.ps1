@@ -32,6 +32,11 @@ function StopNmcap
         [void] [System.Reflection.Assembly]::LoadWithPartialName("System.Windows.Forms")
         [System.Windows.Forms.SendKeys]::SendWait('X')
     }
+    if (!$NmProcess.HasExited)
+    {
+        Write-Host 'Automatic Stop Failed!' -ForegroundColor White -BackgroundColor DarkYellow
+        Write-Host 'Switch to NMCap window and press X to stop the capture manually' -ForegroundColor White -BackgroundColor DarkYellow
+    }
 }
 
 if (!(Test-Path "$env:ProgramFiles\Microsoft Network Monitor 3"))
@@ -108,7 +113,7 @@ else
 }
 Write-Host "Calling NetMon" -ForegroundColor White -BackgroundColor DarkGreen
 Write-Host "CommandLine: $env:ProgramFiles\Microsoft Network Monitor 3\nmcap.exe $Argument" -ForegroundColor White -BackgroundColor DarkGreen
-$NmcapProcess = Start-Process -FilePath "$env:ProgramFiles\Microsoft Network Monitor 3\nmcap.exe" -ArgumentList $Argument -PassThru
+$NmcapProcess = Start-Process -FilePath "$env:ProgramFiles\Microsoft Network Monitor 3\nmcap.exe" -ArgumentList $Argument -WindowStyle Minimized -PassThru
 
 $Continue = $true
 while ($Continue)
