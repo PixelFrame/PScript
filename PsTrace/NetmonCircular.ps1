@@ -102,7 +102,7 @@ Write-Host "Press Enter to Start Capture." -ForegroundColor White -BackgroundCol
 Write-Host "Press F12 to Stop Capture.   " -ForegroundColor White -BackgroundColor DarkGreen
 Read-Host
 
-$Argument = "/UseProfile $Parser /Network * /Capture $CaptureFilter /file $OutPath\NetTraceNM.chn:" + $Size + "M /StopWhen /Frame IPv4.Address == 4.3.2.1 AND ICMP /TerminateWhen /KeyPress X"
+$Argument = "/UseProfile $ParserId /Network * /Capture $CaptureFilter /file $OutPath\NetTraceNM.chn:" + $Size + "M /StopWhen /Frame IPv4.Address == 4.3.2.1 AND ICMP /TerminateWhen /KeyPress X"
 if (([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator"))
 {
     $Argument += ' /CaptureProcesses'
