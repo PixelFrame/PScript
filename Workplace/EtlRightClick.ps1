@@ -21,17 +21,17 @@ function Write-Registry
     $ClassPaths += "HKCR:\SystemFileAssociations\.etl"
     foreach ($ClassPath in $ClassPaths)
     {
-        (New-Item $ClassPath\'shell' -Force).Name
-        (New-Item $ClassPath\'shell\Convert with TMF' -Force).Name
-        (New-Item $ClassPath\'shell\Convert with TMF\command' -Force).Name
+        if (!(Test-Path $ClassPath\'shell')) { (New-Item $ClassPath\'shell' -Force).Name }
+        if (!(Test-Path $ClassPath\'shell\Convert with TMF')) { (New-Item $ClassPath\'shell\Convert with TMF' -Force).Name }
+        if (!(Test-Path $ClassPath\'shell\Convert with TMF\command')) { (New-Item $ClassPath\'shell\Convert with TMF\command' -Force).Name }
         Set-ItemProperty -Path $ClassPath\'shell\Convert with TMF\command' -Name '(default)' -Value "PowerShell.exe -File `"$StubPath`" -Etl `"%1`" -Mode TMF" -Force
 
-        (New-Item $ClassPath\'shell\Split Trace' -Force).Name
-        (New-Item $ClassPath\'shell\Split Trace\command' -Force).Name
+        if (!(Test-Path $ClassPath\'shell\Split Trace')) { (New-Item $ClassPath\'shell\Split Trace' -Force).Name }
+        if (!(Test-Path $ClassPath\'shell\Split Trace\command')) { (New-Item $ClassPath\'shell\Split Trace\command' -Force).Name }
         Set-ItemProperty -Path $ClassPath\'shell\Split Trace\command' -Name '(default)' -Value "PowerShell.exe -File `"$StubPath`" -Etl `"%1`" -Mode Split" -Force
     
-        (New-Item $ClassPath\'shell\Convert to pcapng' -Force).Name
-        (New-Item $ClassPath\'shell\Convert to pcapng\command' -Force).Name
+        if (!(Test-Path $ClassPath\'shell\Convert to pcapng')) { (New-Item $ClassPath\'shell\Convert to pcapng' -Force).Name }
+        if (!(Test-Path $ClassPath\'shell\Convert to pcapng\command')) { (New-Item $ClassPath\'shell\Convert to pcapng\command' -Force).Name }
         Set-ItemProperty -Path $ClassPath\'shell\Convert to pcapng\command' -Name '(default)' -Value "PowerShell.exe -File `"$StubPath`" -Etl `"%1`" -Mode pcapng" -Force
     }
 }
