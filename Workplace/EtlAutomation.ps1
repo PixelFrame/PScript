@@ -1,14 +1,15 @@
 [CmdletBinding()]
 param (
     [Parameter(Mandatory = $true)]
-    [ValidateScript( { Test-Path -Path $_ })]
     [string] $Etl,
     [Parameter(Mandatory = $true)]
     [ValidateSet('TMF', 'Split', 'pcapng')]
     [string] $Mode
 )
 
-$EtlFile = Get-Item $Etl
+$Etl = $Etl.Replace('[', '``[')
+$Etl = $Etl.Replace(']', '``]')
+$EtlFile = Get-Item $Etl -ErrorAction Suspend
 $TMFPath = $Env:PUBLIC + '\TMF'
 try
 {
