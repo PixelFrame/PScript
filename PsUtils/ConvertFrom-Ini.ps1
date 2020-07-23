@@ -1,48 +1,48 @@
+
 [CmdletBinding()]
 param (
     [Parameter(ValueFromPipeline)]
     [string]
-    $Ini = "C:\Users\pm421\AppData\Local\Microsoft\OneDrive\settings\Personal\ClientPolicy.ini",
-
-    [Parameter()]
-    [ValidateSet('UTF8', 'UTF8BOM', 'UTF8NoBOM', 'UTF7', 'UNICODE', 'ASCII', 'BigEndianUnicode', 'OEM', 'UTF32')]
-    [string]
-    $Encoding = 'ASCII'
+    $Ini
 )
-
-$IniContent = Get-Content -Path $Ini -Encoding $Encoding
-$HT = @{ }
-for ($i = 0; $i -lt $IniContent.Count; ++$i)
+PROCESS
 {
-    if ($IniContent[$i] -match "^\[.*\]$")
+    [string[]] $IniLines += $Ini
+}
+END
+{
+    for ($i = 0; $i -lt $IniLines.Count; ++$i)
     {
-        if ($i -eq 0)
+        if ($IniLines[$i] -match "^\[.*\]$")
         {
-            $ItemName = $IniContent[$i].Substring(1, $IniContent[$i].LastIndexOf(']') - 1)
-            $ItemHT = @{ }
-            continue
-        }
-        $ItemValue = New-Object PSObject -Property $ItemHT
-        $HT += @{$ItemName = $ItemValue }
-        $ItemName = $IniContent[$i].Substring(1, $IniContent[$i].LastIndexOf(']') - 1)
-        $ItemHT = @{ }
-    }
-    else
-    {
-        $IniContent[$i] = $IniContent[$i].Trim()
-        if ($IniContent[$i] -eq '')
-        {
-            continue
-        }
-        $Property = $IniContent[$i].Split('=')[0]
-        $Value = $IniContent[$i].Split('=')[1]
-        $ItemHT += @{ $Property = $Value }
-        if ($i -eq ($IniContent.Count - 1))
-        {
+            if ($i -eq 0)
+            {
+                $ItemName = $IniLines[$i].Substring(1, $IniLines[$i].LastIndexOf(']') - 1)
+                $ItemHT = @{ }
+                continue
+            }
             $ItemValue = New-Object PSObject -Property $ItemHT
             $HT += @{$ItemName = $ItemValue }
+            $ItemName = $IniLines[$i].Substring(1, $IniLines[$i].LastIndexOf(']') - 1)
+            $ItemHT = @{ }
+        }
+        else
+        {
+            $IniLines[$i] = $IniLines[$i].Trim()
+            if ($IniLines[$i] -eq '')
+            {
+                continue
+            }
+            $Property = $IniLines[$i].Split('=')[0]
+            $Value = $IniLines[$i].Split('=')[1]
+            $ItemHT += @{ $Property = $Value }
+            if ($i -eq ($IniLines.Count - 1))
+            {
+                $ItemValue = New-Object PSObject -Property $ItemHT
+                $HT += @{$ItemName = $ItemValue }
+            }
         }
     }
-}
 
-New-Object PSObject -Property $HT
+    return New-Object PSObject -Property $HT
+}
