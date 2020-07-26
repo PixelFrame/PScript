@@ -120,25 +120,25 @@ function Convert-IPv4ToUInt32
 
 class IPv4Range
 {
-    [string]    $StartingIP;
+    [string]    $BeginningIP;
     [string]    $EndingIP;
-    [UInt32]    $StartingIPNum;
+    [UInt32]    $BeginningIPNum;
     [UInt32]    $EndingIPNum;
 
     IPv4Range(
-        [string]    $StartingIP,
+        [string]    $BeginningIP,
         [string]    $EndingIP
     )
     {
-        $this.StartingIP = $StartingIP
+        $this.BeginningIP = $BeginningIP
         $this.EndingIP = $EndingIP
-        $this.StartingIPNum = Convert-IPv4ToUInt32 -Ipv4Addr $StartingIP
+        $this.BeginningIPNum = Convert-IPv4ToUInt32 -Ipv4Addr $BeginningIP
         $this.EndingIPNum = Convert-IPv4ToUInt32 -Ipv4Addr $EndingIP
     }
 
     [string] ToString()
     {
-        return "StartingIP: $this.StartingIP, EndingIP: $this.EndingIP"
+        return "BeginningIP: $this.BeginningIP, EndingIP: $this.EndingIP"
     }
 }
 
@@ -165,16 +165,16 @@ function Convert-SubnetToIPv4Range
         }
     }
 
-    $StartingIP = $NetworkIdUInt32 -band $Mask
+    $BeginningIP = $NetworkIdUInt32 -band $Mask
     $EndingIP = $NetworkIdUInt32 -bor (-bnot $Mask)
 
     if (!$UIntOutput)
     {
-        $StartingIP = Convert-UInt32ToIPv4 $StartingIP
+        $BeginningIP = Convert-UInt32ToIPv4 $BeginningIP
         $EndingIP = Convert-UInt32ToIPv4 $EndingIP
     }
 
-    return [IPv4Range]::new($StartingIP, $EndingIP)
+    return [IPv4Range]::new($BeginningIP, $EndingIP)
 }
 
 class IPv4Subnet
