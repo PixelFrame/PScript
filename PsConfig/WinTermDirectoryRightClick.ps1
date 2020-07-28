@@ -45,8 +45,8 @@ if (!(Test-Path $RegPath\'ContextMenus\Windows Terminal')) { (New-Item $RegPath\
 if (!(Test-Path $RegPath\'ContextMenus\Windows Terminal\shell')) { (New-Item $RegPath\'ContextMenus\Windows Terminal\shell' -Force).Name }
 if (!(Test-Path $RegPath\'ContextMenus\Windows Terminal\shell\openwt')) { (New-Item $RegPath\'ContextMenus\Windows Terminal\shell\openwt' -Force).Name }
 if (!(Test-Path $RegPath\'ContextMenus\Windows Terminal\shell\runas')) { (New-Item $RegPath\'ContextMenus\Windows Terminal\shell\runas' -Force).Name }
-if (!(Test-Path $RegPath\'ContextMenus\Windows Terminal\shell\openwt\command')) { (New-Item $RegPath\'ContextMenus\Windows Terminal\shell\openwt' -Force).Name }
-if (!(Test-Path $RegPath\'ContextMenus\Windows Terminal\shell\runas\command')) { (New-Item $RegPath\'ContextMenus\Windows Terminal\shell\openwt' -Force).Name }
+if (!(Test-Path $RegPath\'ContextMenus\Windows Terminal\shell\openwt\command')) { (New-Item $RegPath\'ContextMenus\Windows Terminal\shell\openwt\command' -Force).Name }
+if (!(Test-Path $RegPath\'ContextMenus\Windows Terminal\shell\runas\command')) { (New-Item $RegPath\'ContextMenus\Windows Terminal\shell\runas\command' -Force).Name }
 
 New-ItemProperty -Path $RegPath\'ContextMenus\Windows Terminal\shell\openwt' -Name 'Icon' `
     -Value $WinTermRoot\'WindowsTerminal.exe' `
