@@ -12,6 +12,7 @@ function Write-Registry
     }
     catch
     {
+        New-ItemProperty -Path 'HKCR:\.etl' -Name '(default)'
         Set-ItemProperty 'HKCR:\.etl' -Name '(default)' -Value 'etl_auto_file'
         $EtlProperty = 'etl_auto_file'
     }

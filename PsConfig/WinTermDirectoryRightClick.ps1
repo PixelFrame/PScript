@@ -14,7 +14,7 @@ if ($null -eq $WinTermRoot)
 $WinTermExe = $env:LOCALAPPDATA + '\Microsoft\WindowsApps\wt.exe'
 if (Test-Path $WinTermExe)
 {
-    $WinTermOpenCmd = "`"$WinTermExe`" -d `"%V`""
+    $WinTermOpenCmd = "`"$WinTermExe`" -d `"%V\.`""
 }
 else
 {
