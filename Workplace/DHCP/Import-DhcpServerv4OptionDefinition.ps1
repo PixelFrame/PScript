@@ -17,7 +17,7 @@ else
     foreach ($File in $OptionFiles)
     {
         $Options = [string] (Get-Content -Path $File) | ConvertFrom-Json
-        $LocalOptions = Get-DhcpServerv4OptionDefinition
+        $LocalOptions = Get-DhcpServerv4OptionDefinition -VendorClass $Options[0].VendorClass
         foreach ($Option in $Options)
         {
             if ($LocalOptions.OptionId -notcontains $Option.OptionId)
