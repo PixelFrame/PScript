@@ -2,7 +2,7 @@
 param (
     [Parameter()]
     [string]
-    $Path = 'C:\DhcpClassOption'
+    $Path = 'C:\DhcpVendorClassAndOption'
 )
 
 $OptionFiles = Get-ChildItem -Path $Path\Options*.json
@@ -16,8 +16,9 @@ else
 {
     foreach ($File in $OptionFiles)
     {
-        $Options = [string] (Get-Content -Path $File) | ConvertFrom-Json
+        $Options = [string] (Get-Content -Path $File) | ConvertFrom-Json -ErrorAction SilentlyContinue # Convert to string type as bug of ConvertFrom-Json on Windows Server 2012
         $LocalOptions = Get-DhcpServerv4OptionDefinition -VendorClass $Options[0].VendorClass
+        "Processing Vendor Class " + $Options[0].VendorClass
         foreach ($Option in $Options)
         {
             if ($LocalOptions.OptionId -notcontains $Option.OptionId)
@@ -42,5 +43,7 @@ else
                 "Skipped Option " + $Option.OptionId
             }
         }
+        "Process Completed Class " + $Options[0].VendorClass
+        ""
     }
 }

@@ -2,10 +2,10 @@
 param (
     [Parameter()]
     [string]
-    $Path = 'C:\DhcpClassOption'
+    $Path = 'C:\DhcpVendorClassAndOption'
 )
 
-$Classes = [string] (Get-Content -Path $Path\Classes.json) | ConvertFrom-Json
+$Classes = [string] (Get-Content -Path $Path\VendorClasses.json) | ConvertFrom-Json
 $LocalClasses = Get-DhcpServerv4Class
 foreach ($Class in $Classes)
 {
