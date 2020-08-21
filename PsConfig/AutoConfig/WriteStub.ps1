@@ -10,5 +10,5 @@ if (!(Test-Path -Path $ProfilePath\Scripts))
 {
     New-Item -Path $ProfilePath\Scripts -ItemType Directory | Out-Null
 }
-Copy-Item -Path $PSScriptRoot\..\ConfigPS.ps1 -Destination $ProfilePath\Scripts -Force
-Copy-Item -Path $PSScriptRoot -Destination $ProfilePath\Scripts -Recurse -Force
+Copy-Item -Path $PSScriptRoot\..\ConfigPS.ps1 -Destination $ProfilePath\Scripts -Force -ErrorAction SilentlyContinue
+Copy-Item -Path $PSScriptRoot -Destination $ProfilePath\Scripts -Recurse -Force -ErrorAction SilentlyContinue
