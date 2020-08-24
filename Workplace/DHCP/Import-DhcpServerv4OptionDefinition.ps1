@@ -2,7 +2,7 @@
 param (
     [Parameter()]
     [string]
-    $Path = 'C:\DhcpVendorClassAndOption'
+    $Path = 'C:\DhcpClassAndOption'
 )
 
 $OptionFiles = Get-ChildItem -Path $Path\Options*.json

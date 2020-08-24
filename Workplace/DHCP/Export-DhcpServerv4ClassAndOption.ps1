@@ -2,7 +2,7 @@
 param (
     [Parameter()]
     [string]
-    $Path = 'C:\DhcpVendorClassAndOption'
+    $Path = 'C:\DhcpClassAndOption'
 )
 
 if (!(Test-Path $Path))
@@ -12,6 +12,9 @@ if (!(Test-Path $Path))
 
 $VendorClasses = Get-DhcpServerv4Class -Type Vendor
 $VendorClasses | ConvertTo-Json | Out-File $Path\VendorClasses.json
+$UserClasses = Get-DhcpServerv4Class -Type User
+$UserClasses | ConvertTo-Json | Out-File $Path\UserClasses.json
+
 Get-DhcpServerv4OptionDefinition | ConvertTo-Json | Out-File $Path\Options.json
 foreach ($VendorClass in $VendorClasses)
 {
