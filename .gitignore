@@ -1,7 +1,8 @@
 \.vscode
 
 Debug
-Binary
-Bin
+
+# Binary
+*.dll
 
 *_INTERNAL*
