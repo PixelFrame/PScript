@@ -56,7 +56,7 @@ param (
 `$Etl = `$Etl.Replace('[', '````[')
 `$Etl = `$Etl.Replace(']', '````]')
 `$EtlFile = Get-Item `$Etl
-`$TMFPath = '$TMF'
+`$TMFPath = '`$TMF'
 
 try
 {
@@ -69,20 +69,23 @@ try
                 throw [System.IO.FileNotFoundException] "`$TMFPath not found."
             }
             `$OutFile = `$EtlFile.DirectoryName + '\' + `$EtlFile.BaseName + '-FMT.txt'
-            netsh.exe trace convert input=`$EtlFile output=`$OutFile dump=txt tmfpath=`$TMFPath
+            `$OutLog = `$EtlFile.DirectoryName + '\' + `$EtlFile.BaseName + '-netsh_out.txt'
+            netsh.exe trace convert input=`$EtlFile output=`$OutFile dump=txt tmfpath=`$TMFPath | Tee-Object -FilePath `$OutLog
         }
         'pcapng'
         {
             `$OutFile = `$EtlFile.DirectoryName + '\' + `$EtlFile.BaseName + '.pcapng'
-            etl2pcapng.exe `$EtlFile `$OutFile
+            `$OutLog = `$EtlFile.DirectoryName + '\' + `$EtlFile.BaseName + '-etl2pcapng_out.txt'
+            etl2pcapng.exe `$EtlFile `$OutFile | Tee-Object -FilePath `$OutLog
         }
         'Split'
         {
             `$OutPath = `$EtlFile.DirectoryName + '\' + `$EtlFile.BaseName + '_split'
             `$OutFile = `$OutPath + '\' + `$EtlFile.BaseName + '_split.etl'
+            `$OutLog = `$OutPath + '\' + `$EtlFile.BaseName + '-EtwSplitter_out.txt'
             [Int32] `$FileNum = Read-Host -Prompt "Number of Files"
             New-Item -Path `$OutPath -ItemType Directory -Force | Out-Null
-            EtwSplitter.exe `$EtlFile `$OutFile `$FileNum
+            EtwSplitter.exe `$EtlFile `$OutFile `$FileNum | Tee-Object -FilePath `$OutLog
         }
         Default {}
     }
@@ -94,6 +97,52 @@ catch
 }
 "@
     Out-File -FilePath $StubPath -Encoding utf8 -InputObject $StubScript -Force
+}
+
+function Write-Bin
+{
+    $Uris = @('https://github.com/microsoft/etl2pcapng/releases/download/v1.3.0/etl2pcapng.zip', 'https://github.com/ryanries/ETWSplitter/releases/download/v1.0/ETWSplitter.exe')
+    $Retry = 3
+    $WebClient = New-Object System.Net.WebClient
+
+    $Proxy = [System.Net.WebRequest]::GetSystemWebProxy()
+    $Proxy.Credentials = [System.Net.CredentialCache]::DefaultCredentials
+    $WebClient.Proxy = $Proxy
+
+    foreach ($Uri in $Uris)
+    {
+        $FileName = $Uri.Substring($Uri.LastIndexOf('/') + 1)
+        $DestPath = (Resolve-Path '~').Path + '\' + $FileName
+
+        $AttemptCount = 0
+        Do
+        {
+            $AttemptCount++
+            "Downloading $FileName @ $AttemptCount"
+            try
+            {
+                $WebClient.DownloadFile($Uri, $DestPath)
+            }
+            catch
+            {
+                "Error happend during downloading!"
+                $_
+            }
+        } while (!(Test-Path $DestPath) -and ($AttemptCount -lt $Retry))
+    }
+
+    if ((Test-Path ~\EtwSplitter.exe) -and (Test-Path ~\etl2pcapng.zip))
+    {
+        Move-Item -Path ~\EtwSplitter.exe -Destination $env:SystemRoot\EtwSplitter.exe -Force
+        Expand-Archive -Path ~\etl2pcapng.zip -DestinationPath ~\
+        Move-Item -Path ~\etl2pcapng\x64\etl2pcapng.exe -Destination $env:SystemRoot\etl2pcapng.exe -Force
+    }
+    else
+    {
+        "Download Failed! Please manually download etl2pcapng and ETWSplitter and move them to environment PATH"
+    }
+    Remove-Item -Path ~\etl2pcapng.zip -Force -ErrorAction SilentlyContinue
+    Remove-Item -Path ~\etl2pcapng -Recurse -Force -ErrorAction SilentlyContinue
 }
 
 ## START OF SCRIPT ##
@@ -125,3 +174,15 @@ Write-StubScript -StubPath $StubPath -TMF $TMF
 
 Write-Host "Registering to Right Click Menu"
 Write-Registry -StubPath $StubPath
+
+try
+{
+    Get-Command etl2pcapng.exe -ErrorAction Stop | Out-Null
+    Get-Command ETWSplitter.exe -ErrorAction Stop | Out-Null
+    "etl2pcapng and ETWSplitter found! Skipped downloading."
+}
+catch
+{
+    "Downloading etl2pcapng and ETWSplitter to $env:SystemRoot"
+    Write-Bin
+}
