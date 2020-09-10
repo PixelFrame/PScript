@@ -5,7 +5,7 @@
 
 [string[]] $cbdBandwidth = @('GByte/s', 'MByte/s', 'KByte/s', 'Byte/s', 'GBit/s', 'MBit/s', 'KBit/s', 'Bit/s')
 [string[]] $cbdWindow = @(0..16)
-[string[]] $cbdRtt = @('second', 'millisecond', 'nanosecond')
+[string[]] $cbdRtt = @('second', 'millisecond', 'microsecond')
 
 [double] $dBandwidth = 0    # Byte/Second
 [double] $dWindow = 0       # Byte
