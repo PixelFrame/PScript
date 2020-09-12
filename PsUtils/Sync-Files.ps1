@@ -19,7 +19,7 @@ function SyncFolder
 
 }
 
-function SyncFile
+function SyncFileMirror
 {
     param (
         [string] $SourceFile,
@@ -47,5 +47,5 @@ function SyncFile
 }
 
 $SourceFiles = Get-ChildItem -Path $SourcePath
-$DestPath = Get-ChildItem -Path $DestPath
+$DestFiles = Get-ChildItem -Path $DestPath
 

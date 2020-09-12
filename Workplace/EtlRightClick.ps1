@@ -25,15 +25,23 @@ function Write-Registry
         if (!(Test-Path $ClassPath\'shell')) { (New-Item $ClassPath\'shell' -Force).Name }
         if (!(Test-Path $ClassPath\'shell\Convert with TMF')) { (New-Item $ClassPath\'shell\Convert with TMF' -Force).Name }
         if (!(Test-Path $ClassPath\'shell\Convert with TMF\command')) { (New-Item $ClassPath\'shell\Convert with TMF\command' -Force).Name }
-        Set-ItemProperty -Path $ClassPath\'shell\Convert with TMF\command' -Name '(default)' -Value "PowerShell.exe -File `"$StubPath`" -Etl `"%1`" -Mode TMF" -Force
+        Set-ItemProperty -Path $ClassPath\'shell\Convert with TMF\command' -Name '(default)' -Value "PowerShell.exe -NoProfile -File `"$StubPath`" -Etl `"%1`" -Mode TMF" -Force
 
         if (!(Test-Path $ClassPath\'shell\Split Trace')) { (New-Item $ClassPath\'shell\Split Trace' -Force).Name }
         if (!(Test-Path $ClassPath\'shell\Split Trace\command')) { (New-Item $ClassPath\'shell\Split Trace\command' -Force).Name }
-        Set-ItemProperty -Path $ClassPath\'shell\Split Trace\command' -Name '(default)' -Value "PowerShell.exe -File `"$StubPath`" -Etl `"%1`" -Mode Split" -Force
+        Set-ItemProperty -Path $ClassPath\'shell\Split Trace\command' -Name '(default)' -Value "PowerShell.exe -NoProfile -File `"$StubPath`" -Etl `"%1`" -Mode Split" -Force
     
         if (!(Test-Path $ClassPath\'shell\Convert to pcapng')) { (New-Item $ClassPath\'shell\Convert to pcapng' -Force).Name }
         if (!(Test-Path $ClassPath\'shell\Convert to pcapng\command')) { (New-Item $ClassPath\'shell\Convert to pcapng\command' -Force).Name }
-        Set-ItemProperty -Path $ClassPath\'shell\Convert to pcapng\command' -Name '(default)' -Value "PowerShell.exe -File `"$StubPath`" -Etl `"%1`" -Mode pcapng" -Force
+        Set-ItemProperty -Path $ClassPath\'shell\Convert to pcapng\command' -Name '(default)' -Value "PowerShell.exe -NoProfile -File `"$StubPath`" -Etl `"%1`" -Mode pcapng" -Force
+        
+        if (!(Test-Path $ClassPath\'shell\Convert to pcapng (pktmon)')) { (New-Item $ClassPath\'shell\Convert to pcapng (pktmon)' -Force).Name }
+        if (!(Test-Path $ClassPath\'shell\Convert to pcapng (pktmon)\command')) { (New-Item $ClassPath\'shell\Convert to pcapng (pktmon)\command' -Force).Name }
+        Set-ItemProperty -Path $ClassPath\'shell\Convert to pcapng (pktmon)\command' -Name '(default)' -Value "PowerShell.exe -NoProfile -File `"$StubPath`" -Etl `"%1`" -Mode pktmonpcapng" -Force
+        
+        if (!(Test-Path $ClassPath\'shell\Format (pktmon)')) { (New-Item $ClassPath\'shell\Format (pktmon)' -Force).Name }
+        if (!(Test-Path $ClassPath\'shell\Format (pktmon)\command')) { (New-Item $ClassPath\'shell\Format (pktmon)\command' -Force).Name }
+        Set-ItemProperty -Path $ClassPath\'shell\Format (pktmon)\command' -Name '(default)' -Value "PowerShell.exe -NoProfile -File `"$StubPath`" -Etl `"%1`" -Mode pktmonformat" -Force
     }
 }
 
@@ -49,7 +57,7 @@ param (
     [Parameter(Mandatory = `$true)]
     [string] `$Etl,
     [Parameter(Mandatory = `$true)]
-    [ValidateSet('TMF', 'Split', 'pcapng')]
+    [ValidateSet('TMF', 'Split', 'pcapng', 'pktmonpcapng', 'pktmonformat')]
     [string] `$Mode
 )
 
@@ -86,6 +94,17 @@ try
             [Int32] `$FileNum = Read-Host -Prompt "Number of Files"
             New-Item -Path `$OutPath -ItemType Directory -Force | Out-Null
             EtwSplitter.exe `$EtlFile `$OutFile `$FileNum | Tee-Object -FilePath `$OutLog
+        }
+        
+        'pktmonformat'
+        {
+            `$OutLog = `$EtlFile.DirectoryName + '\' + `$EtlFile.BaseName + '-pktmon_format_out.txt'
+            PktMon.exe format `$EtlFile -v 3 | Tee-Object -FilePath `$OutLog
+        }
+        'pktmonpcapng'
+        {
+            `$OutLog = `$EtlFile.DirectoryName + '\' + `$EtlFile.BaseName + '-pktmon_pcapng_out.txt'
+            PktMon.exe pcapng `$EtlFile | Tee-Object -FilePath `$OutLog
         }
         Default {}
     }

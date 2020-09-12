@@ -3,7 +3,7 @@ param (
     [Parameter(Mandatory = $true)]
     [string] $Etl,
     [Parameter(Mandatory = $true)]
-    [ValidateSet('TMF', 'Split', 'pcapng')]
+    [ValidateSet('TMF', 'Split', 'pcapng', 'pktmonpcapng', 'pktmonformat')]
     [string] $Mode
 )
 
@@ -39,6 +39,17 @@ try
             [Int32] $FileNum = Read-Host -Prompt "Number of Files"
             New-Item -Path $OutPath -ItemType Directory -Force | Out-Null
             EtwSplitter.exe $EtlFile $OutFile $FileNum | Tee-Object -FilePath $OutLog
+        }
+        # For packet monitor on Windows 20H1
+        'pktmonformat'
+        {
+            $OutLog = $EtlFile.DirectoryName + '\' + $EtlFile.BaseName + '-pktmon_format_out.txt'
+            PktMon.exe format $EtlFile -v 3 | Tee-Object -FilePath $OutLog
+        }
+        'pktmonpcapng'
+        {
+            $OutLog = $EtlFile.DirectoryName + '\' + $EtlFile.BaseName + '-pktmon_pcapng_out.txt'
+            PktMon.exe pcapng $EtlFile | Tee-Object -FilePath $OutLog
         }
         Default {}
     }
