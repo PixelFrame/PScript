@@ -1,7 +1,7 @@
 # Virtual Lab ALWAYS ON VPN
 
 # Tunnel: Automatic (Strategy 14) 
-# Authentication: PEAP-TLS
+# Authentication: PEAP-MSCHAPv2
 # IPsec Crypto: Custom
 # Routing: SplitTunnel
 # Scope: User
@@ -38,43 +38,15 @@ $ProfileXML =
                                 <EapType xmlns="http://www.microsoft.com/provisioning/MsPeapConnectionPropertiesV1">
                                     <ServerValidation>
                                         <DisableUserPromptForServerValidation>false</DisableUserPromptForServerValidation>
-                                        <ServerNames>vpn.vlab.ext</ServerNames>
-                                        <TrustedRootCA>4B 78 0A A5 13 76 64 9E AD 0E 91 47 67 86 50 42 F0 80 B1 61 </TrustedRootCA>
+                                        <ServerNames>vpn.vlab.ext;VLB-SV2.vlab.int</ServerNames>
+                                        <TrustedRootCA>4b 78 0a a5 13 76 64 9e ad 0e 91 47 67 86 50 42 f0 80 b1 61 </TrustedRootCA>
                                     </ServerValidation>
                                     <FastReconnect>true</FastReconnect>
                                     <InnerEapOptional>false</InnerEapOptional>
                                     <Eap xmlns="http://www.microsoft.com/provisioning/BaseEapConnectionPropertiesV1">
-                                        <Type>13</Type>
-                                        <EapType xmlns="http://www.microsoft.com/provisioning/EapTlsConnectionPropertiesV1">
-                                            <CredentialsSource>
-                                                <CertificateStore>
-                                                    <SimpleCertSelection>true</SimpleCertSelection>
-                                                </CertificateStore>
-                                            </CredentialsSource>
-                                            <ServerValidation>
-                                                <DisableUserPromptForServerValidation>false</DisableUserPromptForServerValidation>
-                                                <ServerNames>vlb-sv2.vlab.int</ServerNames>
-                                                <TrustedRootCA>4B 78 0A A5 13 76 64 9E AD 0E 91 47 67 86 50 42 F0 80 B1 61 </TrustedRootCA>
-                                            </ServerValidation>
-                                            <DifferentUsername>false</DifferentUsername>
-                                            <PerformServerValidation xmlns="http://www.microsoft.com/provisioning/EapTlsConnectionPropertiesV2">true</PerformServerValidation>
-                                            <AcceptServerName xmlns="http://www.microsoft.com/provisioning/EapTlsConnectionPropertiesV2">true</AcceptServerName>
-                                            <TLSExtensions xmlns="http://www.microsoft.com/provisioning/EapTlsConnectionPropertiesV2">
-                                                <FilteringInfo xmlns="http://www.microsoft.com/provisioning/EapTlsConnectionPropertiesV3">
-                                                    <AllPurposeEnabled>true</AllPurposeEnabled>
-                                                    <CAHashList Enabled="true">
-                                                        <IssuerHash>4B 78 0A A5 13 76 64 9E AD 0E 91 47 67 86 50 42 F0 80 B1 61 </IssuerHash>
-                                                    </CAHashList>
-                                                    <EKUMapping>
-                                                        <EKUMap>
-                                                            <EKUName>Client Authentication</EKUName>
-                                                            <EKUOID>1.3.6.1.5.5.7.3.2</EKUOID>
-                                                        </EKUMap>
-                                                    </EKUMapping>
-                                                    <ClientAuthEKUList Enabled="true" />
-                                                    <AnyPurposeEKUList Enabled="true" />
-                                                </FilteringInfo>
-                                            </TLSExtensions>
+                                        <Type>26</Type>
+                                        <EapType xmlns="http://www.microsoft.com/provisioning/MsChapV2ConnectionPropertiesV1">
+                                            <UseWinLogonCredentials>true</UseWinLogonCredentials>
                                         </EapType>
                                     </Eap>
                                     <EnableQuarantineChecks>false</EnableQuarantineChecks>
@@ -103,7 +75,6 @@ $ProfileXML =
         <Address>10.1.1.0</Address>
         <PrefixSize>24</PrefixSize>
     </Route>
-    <RegisterDns>true</RegisterDns>
     <DeviceTunnel>false</DeviceTunnel>
 </VPNProfile>
 '@
