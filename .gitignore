@@ -2,4 +2,7 @@
 
 Debug
 
+# Binary
+*.dll
+
 *_INTERNAL*

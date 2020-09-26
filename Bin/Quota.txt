@@ -1,0 +1,7 @@
+# Binaries used
+
+TagLibSharp
+https://github.com/mono/taglib-sharp/
+
+Ude
+https://github.com/errepi/ude
