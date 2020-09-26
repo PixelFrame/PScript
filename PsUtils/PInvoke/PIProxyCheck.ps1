@@ -234,9 +234,11 @@ if ($Url.Length -gt 0)
         else 
         {
             $ErrorCode = [System.Runtime.InteropServices.Marshal]::GetLastWin32Error()
-            "    Win32 Call: WinHttpGetProxyForUrl Auto Detect Failed. Error Code: $ErrorCode"
+            "    Win32 Call: WinHttpGetProxyForUrl IE PAC Failed. Error Code: $ErrorCode"
         }
 
         [WinHttp]::WinHttpCloseHandle($SessionHandle) | Out-Null
     }
 }
+""
+Pause
