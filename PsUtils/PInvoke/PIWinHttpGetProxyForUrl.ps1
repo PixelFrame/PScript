@@ -108,7 +108,8 @@ if([WinHttp]::WinHttpGetProxyForUrl($SessionHandle, $Url, [ref] $AutoProxyOption
 {
     $ProxyInfo | Format-List
 }
-else {
+else 
+{
     $ErrorCode = [System.Runtime.InteropServices.Marshal]::GetLastWin32Error()
     "WinHttpGetProxyForUrl Auto Detect Failed. Code: $ErrorCode"
 }
