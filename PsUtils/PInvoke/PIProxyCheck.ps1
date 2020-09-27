@@ -2,9 +2,16 @@
 param (
     [Parameter(ValueFromPipeline)]
     [string]
-    $Url = $null
+    $Url = $null,
+
+    [switch]
+    $ResetAutoProxy,
+
+    [switch]
+    $SaveScript
 )
 
+# .NET P/INVOKE
 $Win32CallDef = @'
     using System;
     using System.Runtime.InteropServices;
@@ -36,6 +43,11 @@ $Win32CallDef = @'
         public static extern bool WinHttpDetectAutoProxyConfigUrl(
             AutoDetectFlag dwAutoDetectFlags,
             ref string ppwstrAutoConfigUrl);
+
+        [DllImport("winhttp.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+        public static extern int WinHttpResetAutoProxy(
+            IntPtr hSession,
+            ResetFlag dwFlags);
 
         [DllImport("winhttp.dll", CharSet = CharSet.Unicode, SetLastError = true)]
         public static extern bool WinHttpCloseHandle(IntPtr hInternet);
@@ -82,7 +94,7 @@ $Win32CallDef = @'
         WINHTTP_AUTOPROXY_RUN_OUTPROCESS_ONLY = 0x00020000,
         WINHTTP_AUTOPROXY_NO_DIRECTACCESS = 0x00040000,
         WINHTTP_AUTOPROXY_NO_CACHE_CLIENT = 0x00080000,
-        WINHTTP_AUTOPROXY_NO_CACHE_SVC = 0x00100000,
+        WINHTTP_AUTOPROXY_NO_CACHE_SVC = 0x00100000
     }
 
     [Flags]
@@ -107,6 +119,19 @@ $Win32CallDef = @'
         public string lpszAutoConfigUrl;
         public string lpszProxy;
         public string lpszProxyBypass;
+    }
+
+    [Flags]
+    public enum ResetFlag
+    {
+        WINHTTP_RESET_STATE = 0x00000001,
+        WINHTTP_RESET_SWPAD_CURRENT_NETWORK = 0x00000002,
+        WINHTTP_RESET_SWPAD_ALL = 0x00000004,
+        WINHTTP_RESET_SCRIPT_CACHE = 0x00000008,
+        WINHTTP_RESET_ALL = 0x0000FFFF,
+        WINHTTP_RESET_NOTIFY_NETWORK_CHANGED = 0x00010000,
+        WINHTTP_RESET_OUT_OF_PROC = 0x00020000,
+        WINHTTP_RESET_DISCARD_RESOLVERS = 0x00040000
     }
 '@
 
@@ -137,6 +162,21 @@ function PrintIEProxyConfig
     "    Bypass List     : {0}" -f $IEProxyConfig.lpszProxyBypass 
 }
 
+if ($ResetAutoProxy)
+{
+    $SessionHandle = [WinHttp]::WinHttpOpen("PINVOKE WINHTTP CLIENT/1.0", [AccessType]::WINHTTP_ACCESS_TYPE_NO_PROXY, "", "", 0);
+    $ResetResult = [WinHttp]::WinHttpResetAutoProxy($SessionHandle, [ResetFlag]::WINHTTP_RESET_ALL -bor [ResetFlag]::WINHTTP_RESET_OUT_OF_PROC)
+    if ($ResetResult -eq 0)
+    {
+        "Reset Successfully"
+    }
+    else
+    {
+        "Reset Failed: $ResetResult"
+    }
+    [WinHttp]::WinHttpCloseHandle($SessionHandle) | Out-Null
+}
+
 Write-Host "`nWinINET Proxy" -ForegroundColor Blue
 $IEProxyConfig = New-Object WINHTTP_CURRENT_USER_IE_PROXY_CONFIG
 $IEPacAddr = $null
@@ -144,6 +184,21 @@ if ([WinHttp]::WinHttpGetIEProxyConfigForCurrentUser([ref] $IEProxyConfig))
 {
     PrintIEProxyConfig $IEProxyConfig
     $IEPacAddr = $IEProxyConfig.lpszAutoConfigUrl
+
+    if ($SaveScript -and $IEPacAddr.Length -gt 0)
+    {
+        Write-Host "    Downloading Script..." -ForegroundColor Green
+        try
+        {
+            Invoke-WebRequest -Uri $IEPacAddr -OutFile $PSScriptRoot\IE_PAC.js
+            Write-Host "    Downloaded script file: $PSScriptRoot\IE_PAC.js`n" -ForegroundColor Green
+        }
+        catch
+        {
+            Write-Host "    Failed to download script file" -ForegroundColor Red
+            $Error[0]
+        }
+    }
 }
 else 
 {
@@ -170,6 +225,21 @@ if ([WinHttp]::WinHttpDetectAutoProxyConfigUrl([AutoDetectFlag]::WINHTTP_AUTO_DE
 {
     $AutoProxyAvailable = $true
     "    DHCP WPAD Address: $WpadAddr"
+    
+    if ($SaveScript)
+    {
+        Write-Host "    Downloading Script..." -ForegroundColor Green
+        try
+        {
+            Invoke-WebRequest -Uri $WpadAddr -OutFile $PSScriptRoot\WPAD_DHCP_PAC.js
+            Write-Host "    Downloaded script file: $PSScriptRoot\WPAD_DHCP_PAC.js`n" -ForegroundColor Green
+        }
+        catch
+        {
+            Write-Host "    Failed to download script file" -ForegroundColor Red
+            $Error[0]
+        }
+    }
 }
 else 
 {
@@ -180,6 +250,21 @@ if ([WinHttp]::WinHttpDetectAutoProxyConfigUrl([AutoDetectFlag]::WINHTTP_AUTO_DE
 {
     $AutoProxyAvailable = $true
     "    DNS WPAD Address: $WpadAddr"
+
+    if ($SaveScript)
+    {
+        Write-Host "    Downloading Script..." -ForegroundColor Green
+        try
+        {
+            Invoke-WebRequest -Uri $WpadAddr -OutFile $PSScriptRoot\WPAD_DNS_PAC.js
+            Write-Host "    Downloaded script file: $PSScriptRoot\WPAD_DNS_PAC.js`n" -ForegroundColor Green
+        }
+        catch
+        {
+            Write-Host "    Failed to download script file" -ForegroundColor Red
+            $Error[0]
+        }
+    }
 }
 else 
 {
@@ -218,7 +303,7 @@ if ($Url.Length -gt 0)
     {
         Write-Host "`nWinHttpGetProxyForUrl with IE Auto Config URL" -ForegroundColor Blue
 
-        $SessionHandle = [WinHttp]::WinHttpOpen("PINVOKE WINHTTP CLIENT/1.0", [AccessType]::WINHTTP_ACCESS_TYPE_NO_PROXY, "", "", 0);
+        $SessionHandle = [WinHttp]::WinHttpOpen("PWSH PINVOKE WINHTTP CLIENT/1.0", [AccessType]::WINHTTP_ACCESS_TYPE_NO_PROXY, "", "", 0);
 
         $AutoProxyOptions = New-Object WINHTTP_AUTOPROXY_OPTIONS
         $AutoProxyOptions.dwFlags = [AutoProxyFlag]::WINHTTP_AUTOPROXY_CONFIG_URL
