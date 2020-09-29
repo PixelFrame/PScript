@@ -1,6 +1,6 @@
 # PowerShell Scripts Repository
 
-![](https://img.shields.io/badge/PowerShell-7.0-5391FE?style=flat-square&logo=PowerShell)
+![](https://img.shields.io/badge/PowerShell-7.0-5391FE?style=flat-square&logo=PowerShell&link=https://github.com/PowerShell/PowerShell/)
 
 PowerShell scripts written for work or for just fun.
 
