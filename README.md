@@ -1,5 +1,19 @@
 # PowerShell Scripts Repository
 
-by Pixel Frame
+![](https://img.shields.io/badge/PowerShell-7.0-5391FE?style=flat-square&logo=PowerShell)
 
-Just something boring :-)
+PowerShell scripts written for work or for just fun.
+
+```PlainText
+.
++-- PsConfig        // Scripts for PowerShell and terminal configuration
++-- PsTheme         // Config files of PowerShell and terminal theme
++-- PsTrace         // Scripts for Windows troubleshooting tracing
++-- PsUtils         // Scripts for various utilities
+|   +-- PInvoke     // Scripts using .NET P/Invoke
+|       +-- CSharp  // C# files of P/Invoke proto
+|   +-- PsGUI       // Scripts using Windows GUI
+|   +-- PSocket     // .NET socket testing scripts
+|   +-- PsPipe      // Windows named pipe testing scripts
++-- Workplace
+```
