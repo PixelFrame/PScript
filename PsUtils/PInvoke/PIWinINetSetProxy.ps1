@@ -2,9 +2,9 @@
 param (
     [Parameter(Mandatory = $true, ParameterSetName = 'PAC', Position = 0)]
     [Parameter(Mandatory = $true, ParameterSetName = 'NamedProxy', Position = 0)]
-    [Parameter(Mandatory = $true, ParameterSetName = 'AutoDetect', Position = 0)]
+    [Parameter(Mandatory = $true, ParameterSetName = 'Single', Position = 0)]
     [string]
-    [ValidateSet('PAC', 'NamedProxy', 'AutoDetect')]
+    [ValidateSet('PAC', 'NamedProxy', 'AutoDetect', 'Reset')]
     $Type,
 
     [Parameter(Mandatory = $true, ParameterSetName = 'PAC', Position = 1)]
@@ -15,7 +15,7 @@ param (
     [string]
     $ProxyServer,
 
-    [Parameter(Mandatory = $true, ParameterSetName = 'NamedProxy', Position = 2)]
+    [Parameter(ParameterSetName = 'NamedProxy', Position = 2)]
     [string]
     $BypassList,
 
@@ -31,7 +31,7 @@ using System.Runtime.InteropServices;
 public class WinINET
 {
     [DllImport("wininet.dll", SetLastError = true, CharSet = CharSet.Auto)]
-    public static extern bool InternetSetOption(IntPtr hInternet, OptionFlag dwOption, IntPtr lpBuffer, int dwBufferLength);
+    static extern bool InternetSetOption(IntPtr hInternet, OptionFlag dwOption, IntPtr lpBuffer, int dwBufferLength);
 
     public static bool SetNamedProxy(string ProxyServer, string ProxyBypass, ref int Win32Error)
     {
@@ -163,8 +163,43 @@ public class WinINET
         return iRes;
     }
 
+    public static bool ResetProxy(ref int Win32Error)
+    {
+        var list = new INTERNET_PER_CONN_OPTION_LIST();
+        var option = new INTERNET_PER_CONN_OPTION[1];
+
+        IntPtr pOptions = Marshal.AllocHGlobal(Marshal.SizeOf(option[0]));
+        IntPtr pBuffer = Marshal.AllocHGlobal(Marshal.SizeOf(list));
+
+        bool iRes = false;
+
+        try
+        {
+            option[0].dwOption = PerConnOption.INTERNET_PER_CONN_FLAGS;
+            option[0].Value.dwValue = (int)(PerConnFlag.PROXY_TYPE_DIRECT);
+
+            Marshal.StructureToPtr(option[0], pOptions, true);
+
+            list.dwSize = Marshal.SizeOf(list);
+            list.pszConnection = null;
+            list.dwOptionCount = 1;
+            list.pOptions = pOptions;
+
+            Marshal.StructureToPtr(list, pBuffer, false);
+
+            iRes = InternetSetOption(IntPtr.Zero, OptionFlag.INTERNET_OPTION_PER_CONNECTION_OPTION, pBuffer, Marshal.SizeOf(list));
+            Win32Error = Marshal.GetLastWin32Error();
+        }
+        finally
+        {
+            Marshal.FreeHGlobal(pOptions);
+            Marshal.FreeHGlobal(pBuffer);
+        }
+        return iRes;
+    }
+
     [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Auto)]
-    public struct INTERNET_PER_CONN_OPTION_LIST
+    struct INTERNET_PER_CONN_OPTION_LIST
     {
         public int dwSize;
         public string pszConnection;
@@ -174,7 +209,7 @@ public class WinINET
     }
 
     [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Auto)]
-    public struct INTERNET_PER_CONN_OPTION
+    struct INTERNET_PER_CONN_OPTION
     {
         public PerConnOption dwOption;
         public INTERNET_PER_CONN_OPTION_VALUE Value;
@@ -192,13 +227,13 @@ public class WinINET
         }
     }
 
-    public enum OptionFlag
+    enum OptionFlag
     {
         INTERNET_OPTION_PER_CONNECTION_OPTION = 75,
         INTERNET_OPTION_PROXY = 38
     }
 
-    public enum PerConnOption
+    enum PerConnOption
     {
         INTERNET_PER_CONN_FLAGS = 1,
         INTERNET_PER_CONN_PROXY_SERVER = 2,
@@ -212,7 +247,7 @@ public class WinINET
         INTERNET_PER_CONN_FLAGS_UI = 10,
     }
 
-    public enum PerConnFlag
+    enum PerConnFlag
     {
         PROXY_TYPE_DIRECT = 0x00000001,
         PROXY_TYPE_PROXY = 0x00000002,
@@ -226,6 +261,7 @@ Add-Type -TypeDefinition $Win32CallDef -ErrorAction SilentlyContinue
 
 function PrintHelp
 {
+    'PIWinINetSetProxy.ps1 -Type Reset'
     'PIWinINetSetProxy.ps1 -Type AutoDetect'
     'PIWinINetSetProxy.ps1 -Type PAC -PacUrl <URL>'
     'PIWinINetSetProxy.ps1 -Type NamedProxy -ProxyServer <Server:Port> [-BypassList <BypassList>]'
@@ -260,12 +296,21 @@ else
         }
         'NamedProxy'
         {
+            if ($BypassList.Length -eq 0)
+            {
+                $BypassList = '<local>'
+            }
             $Result = [WinINET]::SetNamedProxy($ProxyServer, $BypassList, [ref] $Win32Error)
             PrintResult
         }
         'PAC'
         {
             $Result = [WinINET]::SetPacUrl($PacUrl, [ref] $Win32Error)
+            PrintResult
+        }
+        'Reset'
+        {
+            $Result = [WinINET]::ResetProxy([ref] $Win32Error)
             PrintResult
         }
         Default
