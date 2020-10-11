@@ -49,35 +49,20 @@ else
     Write-Host "[WARNING] Visual Studio Code Not Exist"
 }
 
-$PathNpp = ${Env:ProgramFiles(x86)} + "/Notepad++/notepad++.exe"
-if (Test-Path -Path $PathNpp)
+# Functions
+function ConfigPSStyle
 {
-    New-Alias -Name npp -Value $PathNpp -Description "Notepad++"
-}
-else
-{
-    Write-Host "[WARNING] Notepad++ Not Exist"
+    Set-Location $env:USERPROFILE\Documents\WindowsPowerShell\Scripts
+    & $env:USERPROFILE\Documents\WindowsPowerShell\Scripts\ConfigPS.ps1 TerminalStyle
+    exit
 }
 
 # Welcome
 Write-Host "KERNEL IN THE SHELL - Pixel Frame Dev." -ForegroundColor DarkCyan
 Write-Host @"
-
-__/\\\\\\\\\\\\\_____________________/\\\\\\\\\\\____/\\\_________        
- _\/\\\/////////\\\_________________/\\\/////////\\\_\/\\\_________       
-  _\/\\\_______\/\\\________________\//\\\______\///__\/\\\_________      
-   _\/\\\\\\\\\\\\\/______/\\\\\______\////\\\_________\/\\\_________     
-    _\/\\\/////////______/\\\///\\\_______\////\\\______\/\\\\\\\\\\__    
-     _\/\\\______________/\\\__\//\\\_________\////\\\___\/\\\/////\\\_   
-      _\/\\\_____________\//\\\__/\\\___/\\\______\//\\\__\/\\\___\/\\\_  
-       _\/\\\______________\///\\\\\/___\///\\\\\\\\\\\/___\/\\\___\/\\\_ 
-        _\///_________________\/////_______\///////////_____\///____\///__
-
+    ____ _       _______ __  __
+   / __ \ |     / / ___// / / /
+  / /_/ / | /| / /\__ \/ /_/ / 
+ / ____/| |/ |/ /___/ / __  /  
+/_/     |__/|__//____/_/ /_/   
 "@ -ForegroundColor Cyan
-
-# try
-# {
-#     Screenfetch
-# }
-# catch
-# { }

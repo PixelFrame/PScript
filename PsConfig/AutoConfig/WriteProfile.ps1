@@ -44,14 +44,21 @@ else
     $Host.UI.RawUI.WindowTitle += $env:USERNAME + ': '
 }
 
+# Functions
+function ConfigPSStyle
+{
+    Set-Location $env:USERPROFILE\Documents\WindowsPowerShell\Scripts
+    & $env:USERPROFILE\Documents\WindowsPowerShell\Scripts\ConfigPS.ps1 TerminalStyle
+    exit
+}
+
 # Welcome
 Write-Host @"
- _       _______   ______  _____
-| |     / /  _/ | / / __ \/ ___/
-| | /| / // //  |/ / /_/ /\__ \ 
-| |/ |/ // // /|  / ____/___/ / 
-|__/|__/___/_/ |_/_/    /____/  
-                                
+    ____ _       _______ __  __
+   / __ \ |     / / ___// / / /
+  / /_/ / | /| / /\__ \/ /_/ / 
+ / ____/| |/ |/ /___/ / __  /  
+/_/     |__/|__//____/_/ /_/   
 "@ -ForegroundColor Blue
 
 '@
