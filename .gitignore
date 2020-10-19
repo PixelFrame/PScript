@@ -1,8 +1,9 @@
-\.vscode
-
+.vscode
 Debug
 
 # Binary
 *.dll
 
+*_EXTERNAL*
 *_INTERNAL*
+*_TEST*

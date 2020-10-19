@@ -14,6 +14,7 @@ PowerShell scripts written for work or for just fun.
 |       +-- CSharp  // C# files of P/Invoke proto
 |   +-- PsGUI       // Scripts using Windows GUI
 |   +-- PSocket     // .NET socket testing scripts
+|   +-- PSpier      // Web Crawling
 |   +-- PsPipe      // Windows named pipe testing scripts
 +-- Workplace
 ```
