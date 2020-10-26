@@ -70,3 +70,21 @@ New-ItemProperty -Path $RegPath\'ContextMenus\Windows Terminal\shell\runas' -Nam
 New-ItemProperty -Path $RegPath\'ContextMenus\Windows Terminal\shell\runas\command' -Name '(default)' `
     -Value $WinTermOpenCmd `
     -PropertyType String -Force
+
+$Trigger = New-ScheduledTaskTrigger -At 7PM -Weekly -WeeksInterval 1 -DaysOfWeek Saturday
+$Action = New-ScheduledTaskAction -Execute "PowerShell.exe" -Argument "-File `"$PSCommandPath`" -NoProfile -NonInteractive -WindowStyle Hidden"
+$Settings = New-ScheduledTaskSettingsSet -ExecutionTimeLimit (New-TimeSpan -Minutes 5)
+$Principal = New-ScheduledTaskPrincipal "$env:USERDOMAIN\$env:USERNAME" -RunLevel Highest
+$Task = New-ScheduledTask -Trigger $Trigger -Action $Action -Settings $Settings -Principal $Principal
+
+try
+{
+    if (Get-ScheduledTask -TaskName WinTermDirRefreshTask -ErrorAction Stop)
+    {
+        Set-ScheduledTask -TaskName WinTermDirRefreshTask -Trigger $Trigger -Action $Action -Settings $Settings -Principal $Principal
+    }
+}
+catch
+{
+    Register-ScheduledTask -TaskName WinTermDirRefreshTask -InputObject $Task
+}
