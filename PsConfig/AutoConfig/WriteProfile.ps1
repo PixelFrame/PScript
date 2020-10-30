@@ -59,17 +59,18 @@ Write-Host @"
   / /_/ / | /| / /\__ \/ /_/ / 
  / ____/| |/ |/ /___/ / __  /  
 /_/     |__/|__//____/_/ /_/   
+
 "@ -ForegroundColor Blue
 
 '@
 
 if ($PSType -eq 'WindowsPowerShell')
 {
-    $HostTitle = 'Windows PowerShell'
+    $HostTitle = 'Windows PowerShell '
 }
 else
 {
-    $HostTitle = 'PowerShell'
+    $HostTitle = 'PowerShell '
 }
 $ProfileContent += '$Host.UI.RawUI.WindowTitle += ' + "'$HostTitle' + " + ' $PSVersionTable.PSVersion.ToString() + " @ " + [environment]::OSVersion.VersionString'
 
