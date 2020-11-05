@@ -1,9 +1,10 @@
-$ProfileName
-$VpnServer
-$NpsServer
-$RootCAHash
-$DnsSuffix
-$RoutingTunnel
+$ProfileName = 'VLAB AoVPN PEAP-TLS UT'
+$VpnServer = 'vpn.vlab.ext'
+$NpsServer = 'VML-MPSRV-01.vlab.int'
+$RootCAHash = '24 21 39 6E 6F A9 1E 19 52 01 01 AD 35 C6 7E B6 D3 1F DB CE '
+$DnsSuffix = 'vlab.int'
+$RoutingTunnel = 'ForceTunnel'
+$EapType = 'TLS'
 
 class CryptographySuite
 {
@@ -13,6 +14,19 @@ class CryptographySuite
     [string] $IntegrityCheckMethod;
     [string] $DHGroup;
     [string] $PfsGroup;
+
+    [string] ToString()
+    {
+        $RES = '<CryptographySuite>'
+        if ($null -ne $this.AuthenticationTransformConstants) { $RES += '    <AuthenticationTransformConstants>$($CryptSuite.AuthenticationTransformConstants)</AuthenticationTransformConstants>' }
+        if ($null -ne $this.CipherTransformConstants) { $RES += '    <CipherTransformConstants>$($CryptSuite.CipherTransformConstants)</CipherTransformConstants>' }
+        if ($null -ne $this.EncryptionMethod) { $RES += '    <EncryptionMethod>$($CryptSuite.EncryptionMethod)</EncryptionMethod>' }
+        if ($null -ne $this.IntegrityCheckMethod) { $RES += '    <IntegrityCheckMethod>$($CryptSuite.IntegrityCheckMethod)</IntegrityCheckMethod>' }
+        if ($null -ne $this.DHGroup) { $RES += '    <DHGroup>$($CryptSuite.DHGroup)</DHGroup>' }
+        if ($null -ne $this.PfsGroup) { $RES += '    <PfsGroup>$($CryptSuite.PfsGroup)</PfsGroup>' }
+        $RES += '</CryptographySuite>'
+        return $RES
+    }
 }
 
 class RoutingEntry
@@ -24,7 +38,7 @@ class RoutingEntry
 }
 
 [CryptographySuite] $CryptSuite
-[RoutingEntry] $Routing
+[RoutingEntry[]] $Routing
 
 $PEAP_MSCHAPv2_STRUCT = @"
 <VPNProfile>
@@ -77,14 +91,7 @@ $PEAP_MSCHAPv2_STRUCT = @"
                 </Configuration>
             </Eap>
         </Authentication>
-        <CryptographySuite>
-            <AuthenticationTransformConstants>$($CryptSuite.AuthenticationTransformConstants)</AuthenticationTransformConstants>
-            <CipherTransformConstants>$($CryptSuite.CipherTransformConstants)</CipherTransformConstants>
-            <EncryptionMethod>$($CryptSuite.EncryptionMethod)</EncryptionMethod>
-            <IntegrityCheckMethod>$($CryptSuite.IntegrityCheckMethod)</IntegrityCheckMethod>
-            <DHGroup>$($CryptSuite.DHGroup)</DHGroup>
-            <PfsGroup>$($CryptSuite.PfsGroup)</PfsGroup>
-        </CryptographySuite>
+        $CryptSuite
     </NativeProfile>
     <DeviceTunnel>false</DeviceTunnel>
 </VPNProfile>
@@ -169,14 +176,7 @@ $PEAP_TLS_STRUCT = @"
                 </Configuration>
             </Eap>
         </Authentication>
-        <CryptographySuite>
-            <AuthenticationTransformConstants>$($CryptSuite.AuthenticationTransformConstants)</AuthenticationTransformConstants>
-            <CipherTransformConstants>$($CryptSuite.CipherTransformConstants)</CipherTransformConstants>
-            <EncryptionMethod>$($CryptSuite.EncryptionMethod)</EncryptionMethod>
-            <IntegrityCheckMethod>$($CryptSuite.IntegrityCheckMethod)</IntegrityCheckMethod>
-            <DHGroup>$($CryptSuite.DHGroup)</DHGroup>
-            <PfsGroup>$($CryptSuite.PfsGroup)</PfsGroup>
-        </CryptographySuite>
+        $CryptSuite
     </NativeProfile>
     <DeviceTunnel>false</DeviceTunnel>
 </VPNProfile>
@@ -299,3 +299,33 @@ foreach ($RasPhone in $RasPhoneBooks)
 $Message = "Script Complete"
 Write-Host "$Message"
 '@
+
+if ($EapType -eq 'MSCHAPv2')
+{
+    $SCRIPT_STRUCT = @"
+
+<#-- Define VPN ProfileXML --#>
+`$ProfileXML = @'
+$PEAP_MSCHAPv2_STRUCT
+'@
+
+"@ + $SCRIPT_STRUCT
+}
+else
+{
+    $SCRIPT_STRUCT = @"
+
+<#-- Define VPN ProfileXML --#>
+`$ProfileXML = @'
+$PEAP_TLS_STRUCT
+'@
+
+"@ + $SCRIPT_STRUCT
+}
+
+$SCRIPT_STRUCT = @"
+`$ProfileName = '$ProfileName'
+`$ProfileNameEscaped = `$ProfileName -replace ' ', '%20'
+"@ + $SCRIPT_STRUCT
+
+Out-File .\DEPLOYMENT_TEST.ps1 -Encoding utf8NoBOM -InputObject $SCRIPT_STRUCT -Force

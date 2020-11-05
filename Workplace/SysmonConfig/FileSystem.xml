@@ -1,0 +1,8 @@
+<Sysmon schemaversion="4.32">
+    <HashAlgorithms>SHA1</HashAlgorithms>
+    <EventFiltering>
+        <FileDelete onmatch="exclude">
+            <TargetFilename condition="excludes">VMASSRV</TargetFilename>
+        </FileDelete>
+    </EventFiltering>
+</Sysmon>
