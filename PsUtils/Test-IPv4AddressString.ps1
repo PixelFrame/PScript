@@ -1,16 +1,33 @@
-
 param (
     [string]
-    $TestStr
+    $TestStr = '1.0.3.4'
 )
-function Test-IPv4AddressString
+
+$Octets = $TestStr.Trim().Split('.')
+if (($Octets.Count -gt 4) -or ($Octets.Count -lt 0))
 {
-    param (
-        [string]
-        $TestStr
-    )
-    $RegExIPv4Str = "^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$"
-    return $TestStr -match $RegExIPv4Str
+    return $false
+}
+$IsFirst = $true
+foreach ($Octet in $Octets)
+{
+    [byte] $bOctet = 0
+    if ([byte]::TryParse($Octet, [ref] $bOctet))
+    {
+        if ($bOctet -gt 255)
+        {
+            return $false
+        }
+        if ($bOctet -eq 0 -and $IsFirst)
+        {
+            return $false
+        }
+    }
+    else
+    {
+        return $false
+    }
+    $IsFirst = $false
 }
 
-Test-IPv4AddressString $TestStr
+return $true

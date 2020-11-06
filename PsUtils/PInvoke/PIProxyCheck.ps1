@@ -2,7 +2,7 @@
 param (
     [Parameter(ValueFromPipeline)]
     [string]
-    $Url = $null,
+    $Url = 'https://www.example.com/',
 
     [switch]
     $ResetAutoProxy,

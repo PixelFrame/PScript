@@ -1,14 +1,19 @@
-$cnt = 0
-$OutFile = [System.IO.File]::OpenWrite('.\Test.dat')
-$RngCsp = New-Object System.Security.Cryptography.RNGCryptoServiceProvider
-    
-while ($cnt -lt 10)
-{
-    $Bytes = New-Object byte[] -ArgumentList 1024
-    $RngCsp.GetBytes($Bytes)
+[CmdletBinding()]
+param (
+    [Parameter()]
+    [int]
+    $Size = 1024
+)
 
-    $OutFile.Write($Bytes)
-    $cnt++ 
+$cnt = 0
+$OutFile = [System.IO.File]::OpenWrite("$PSSCriptRoot\Test.dat")
+$RngCsp = New-Object System.Security.Cryptography.RNGCryptoServiceProvider
+
+while ($cnt++ -lt 16)
+{
+    $Bytes = New-Object byte[] -ArgumentList (65536 * $Size)
+    $RngCsp.GetBytes($Bytes)
+    $OutFile.Write($Bytes, 0, 65536 * $Size)
 }
 
 $OutFile.Close()

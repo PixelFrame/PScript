@@ -10,4 +10,4 @@ Get-NetTCPConnection | ForEach-Object -PipelineVariable TcpConn -Process { $_ } 
         ProcessName   = $Proc.ProcessName;
         ProcessHandle = $Proc.HandleCount
     } } `
-| Format-Table
+| Format-Table -AutoSize
