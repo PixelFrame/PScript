@@ -135,7 +135,7 @@ $Win32CallDef = @'
     }
 '@
 
-Add-Type -TypeDefinition $Win32CallDef -ErrorAction SilentlyContinue
+Add-Type -TypeDefinition $Win32CallDef -ErrorAction Stop
 
 function PrintProxyInfo
 {
@@ -278,7 +278,7 @@ if ($Url.Length -gt 0)
     {
         Write-Host "`nWinHttpGetProxyForUrl with Auto Proxy" -ForegroundColor Blue
 
-        $SessionHandle = [WinHttp]::WinHttpOpen("PINVOKE WINHTTP CLIENT/1.0", [AccessType]::WINHTTP_ACCESS_TYPE_NO_PROXY, "", "", 0);
+        $SessionHandle = [WinHttp]::WinHttpOpen("PWSH PINVOKE WINHTTP CLIENT/1.0", [AccessType]::WINHTTP_ACCESS_TYPE_NO_PROXY, "", "", 0);
 
         $AutoProxyOptions = New-Object WINHTTP_AUTOPROXY_OPTIONS
         $AutoProxyOptions.dwFlags = [AutoProxyFlag]::WINHTTP_AUTOPROXY_AUTO_DETECT
