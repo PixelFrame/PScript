@@ -21,7 +21,7 @@ function CreateScenario
             $Provider = $Providers.OpenSubKey($ProviderGuid)
             $ProviderObjects[$ProviderGuid] = [PSCustomObject]@{
                 Guid     = $ProviderGuid;
-                Keywords = $Provider.GetValue('Keywords');
+                Keywords = '0x{0:x}' -f $Provider.GetValue('Keywords');
                 Level    = $Provider.GetValue('Level');
                 Name     = $Provider.GetValue('Name')
             }
@@ -70,13 +70,13 @@ foreach ($Scenario in $Scenarios)
 }
 
 $ScenarioObjects.GetEnumerator() | ForEach-Object {
-    'Scenario: ' + $_.Name
+    'Scenario: ' + $_.Name + "`n"
     if ($_.Value.Count -gt 0)
     { 
         $_.Value.GetEnumerator() | ForEach-Object {
             $_.Value
         }
     }
-    else { "`nNo provider for this scenario" }
-    "-----------------------------------------------------------`n"
+    else { 'No provider for this scenario' }
+    '-----------------------------------------------------------'
 }
