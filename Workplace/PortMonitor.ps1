@@ -13,7 +13,7 @@ if (!(Test-Path $OutPath))
 { 
     try
     {
-        mkdir $OutPath
+        mkdir $OutPath | Out-Null
     }
     catch
     {
@@ -23,25 +23,52 @@ if (!(Test-Path $OutPath))
     }
 }
 
-$Ports = Get-NetTCPConnection | Select-Object -Property LocalPort, OwningProcess, State | Sort-Object -Property LocalPort
+$TCPConns = Get-NetTCPConnection
+$UDPEps = Get-NetUDPEndpoint
 
-$PortWithProcess = @()
-foreach ($Port in $Ports)
+$ConnInfo = @()
+foreach ($TCPConn in $TCPConns)
 {
-    $Process = Get-Process -PID $Port.OwningProcess
-    $PortWithProcess += New-Object PSObject -Property @{'LocalPort' = $Port.LocalPort; 'PortState' = $Port.State; 'PID' = $Port.OwningProcess; 'ProcessName' = $Process.Name; 'CommandLine' = $Process.Path; 'Handles' = $Process.Handles; } 
+    $Proc = Get-Process -PID $TCPConn.OwningProcess
+    $PropTable = [Ordered]@{
+        Protocol      = 'TCP';
+        LocalAddress  = $TCPConn.LocalAddress; 
+        LocalPort     = $TCPConn.LocalPort; 
+        RemoteAddress = $TCPConn.RemoteAddress;
+        RemotePort    = $TCPConn.RemotePort;
+        State         = $TCPConn.State;
+        ProcessId     = $Proc.Id;
+        ProcessName   = $Proc.ProcessName;
+        ProcessHandle = $Proc.HandleCount;
+        CommandLine   = $Proc.Path
+    } 
+    $ConnInfo += New-Object PSObject -Property $PropTable
 }
 
-$LogFile = $OutPath + '\PortUsage-' + (Get-Date -Format 'yyyyMMdd-HHmmss') + '.log'
+foreach ($UDPEp in $UDPEps)
+{
+    $Proc = Get-Process -PID $UDPEp.OwningProcess
+    $PropTable = [Ordered]@{
+        Protocol      = 'UDP';
+        LocalAddress  = $UDPEp.LocalAddress; 
+        LocalPort     = $UDPEp.LocalPort; 
+        RemoteAddress = 'N/A'
+        RemotePort    = 'N/A'
+        State         = 'N/A'
+        ProcessId     = $Proc.Id;
+        ProcessName   = $Proc.ProcessName;
+        ProcessHandle = $Proc.HandleCount;
+        CommandLine   = $Proc.Path
+    } 
+    $ConnInfo += New-Object PSObject -Property $PropTable
+}
+
+$BaseFile = $OutPath + '\PortUsage-' + (Get-Date -Format 'yyyyMMdd-HHmmssffff')
+$CsvFile = $BaseFile + '.csv'
 
 try
 {
-    'Ports:' | Out-File -FilePath $LogFile -Encoding utf8 -Force 
-    $PortWithProcess | Format-Table -Property LocalPort, PID, ProcessName, PortState, CommandLine -AutoSize | Out-File -FilePath $LogFile -Encoding utf8 -Append
-    '' | Out-File -FilePath $LogFile -Encoding utf8 -Append
-    'Statics:' | Out-File -FilePath $LogFile -Encoding utf8 -Append
-    $PortWithProcess | Group-Object -Property ProcessName | Out-File -FilePath $LogFile -Encoding utf8 -Append
-
+    $ConnInfo | Export-Csv -Path $CsvFile
 }
 catch
 {

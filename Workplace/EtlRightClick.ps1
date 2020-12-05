@@ -23,9 +23,9 @@ function Write-Registry
     foreach ($ClassPath in $ClassPaths)
     {
         if (!(Test-Path $ClassPath\'shell')) { (New-Item $ClassPath\'shell' -Force).Name }
-        if (!(Test-Path $ClassPath\'shell\Convert with TMF')) { (New-Item $ClassPath\'shell\Convert with TMF' -Force).Name }
-        if (!(Test-Path $ClassPath\'shell\Convert with TMF\command')) { (New-Item $ClassPath\'shell\Convert with TMF\command' -Force).Name }
-        Set-ItemProperty -Path $ClassPath\'shell\Convert with TMF\command' -Name '(default)' -Value "PowerShell.exe -NoProfile -File `"$StubPath`" -Etl `"%1`" -Mode TMF" -Force
+        if (!(Test-Path $ClassPath\'shell\Format (netsh)')) { (New-Item $ClassPath\'shell\Format (netsh)' -Force).Name }
+        if (!(Test-Path $ClassPath\'shell\Format (netsh)\command')) { (New-Item $ClassPath\'shell\Format (netsh)\command' -Force).Name }
+        Set-ItemProperty -Path $ClassPath\'shell\Format (netsh)\command' -Name '(default)' -Value "PowerShell.exe -NoProfile -File `"$StubPath`" -Etl `"%1`" -Mode TMF" -Force
 
         if (!(Test-Path $ClassPath\'shell\Split Trace')) { (New-Item $ClassPath\'shell\Split Trace' -Force).Name }
         if (!(Test-Path $ClassPath\'shell\Split Trace\command')) { (New-Item $ClassPath\'shell\Split Trace\command' -Force).Name }

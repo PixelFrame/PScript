@@ -1,0 +1,12 @@
+<Sysmon schemaversion="4.32">
+    <HashAlgorithms>SHA1</HashAlgorithms>
+    <EventFiltering>
+        <NetworkConnect onmatch="include">
+            <Protocol>TCP</Protocol>
+            <DestinationPort>443</DestinationPort>
+        </NetworkConnect>
+        <DnsQuery onmatch="exclude">
+            <Image condition="contains">Sysmon.exe</Image>
+        </DnsQuery>
+    </EventFiltering>
+</Sysmon>
