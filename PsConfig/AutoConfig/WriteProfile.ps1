@@ -9,30 +9,32 @@ Write-Host '[Info] Writing to User PowerShell Profile'
 
 $ProfilePath = $env:USERPROFILE + '\Documents\' + $PSType
 
-if (!(Test-Path -Path $ProfilePath))
-{
-    New-Item -Path $ProfilePath -ItemType Directory | Out-Null
-}
-$ProfilePath += '\Microsoft.PowerShell_profile.ps1'
+if (!(Test-Path -Path $ProfilePath)) { New-Item -Path $ProfilePath -ItemType Directory | Out-Null }
+if (!(Test-Path $ProfilePath\Scripts)) { New-Item -Path $ProfilePath\Scripts -ItemType Directory | Out-Null }
+
 $ProfileContent = @'
 # Set Posh Theme
 Import-Module oh-my-posh
 Set-Theme ParadoxCascadia
 $ThemeSettings.Options.ConsoleTitle = $false
+'@
+
+if (!(Test-Path $ProfilePath\Scripts\Alias.ps1)) { New-Item -ItemType File -Path $ProfilePath\Scripts\Alias.ps1 | Out-Null }
+$ProfileContent += @"
 
 # Alias
-'@
-$PathVsCode = $env:USERPROFILE + '\AppData\Local\Programs\Microsoft VS Code\Code.exe'
-if (Test-Path -Path $PathVsCode)
-{
-    $ProfileContent += "New-Alias -Name vscode -Value '$PathVsCode' -Description 'Visual Studio Code'"
-}
+. $ProfilePath\Scripts\Alias.ps1
+"@
 
-$ProfileContent += '# Environment Path'
-$ProfileContent += '$ScriptsPath = "; " + ' + "$ProfilePath\Scripts"
-$ProfileContent += '$Env:Path += $ScriptsPath'
+if (!(Test-Path $ProfilePath\Scripts\Functions.ps1)) { New-Item -ItemType File -Path $ProfilePath\Scripts\Functions.ps1 | Out-Null }
+$ProfileContent += @"
+
+# Functions
+. $ProfilePath\Scripts\Functions.ps1
+"@
 
 $ProfileContent += @'
+
 # Host Title
 $Host.UI.RawUI.WindowTitle = $env:USERDOMAIN + '\'
 if (Test-Administrator)
@@ -43,25 +45,6 @@ else
 {
     $Host.UI.RawUI.WindowTitle += $env:USERNAME + ': '
 }
-
-# Functions
-function ConfigPSStyle
-{
-    Set-Location $env:USERPROFILE\Documents\WindowsPowerShell\Scripts
-    & $env:USERPROFILE\Documents\WindowsPowerShell\Scripts\ConfigPS.ps1 TerminalStyle
-    exit
-}
-
-# Welcome
-Write-Host @"
-    ____ _       _______ __  __
-   / __ \ |     / / ___// / / /
-  / /_/ / | /| / /\__ \/ /_/ / 
- / ____/| |/ |/ /___/ / __  /  
-/_/     |__/|__//____/_/ /_/   
-
-"@ -ForegroundColor Blue
-
 '@
 
 if ($PSType -eq 'WindowsPowerShell')
@@ -72,6 +55,19 @@ else
 {
     $HostTitle = 'PowerShell '
 }
-$ProfileContent += '$Host.UI.RawUI.WindowTitle += ' + "'$HostTitle' + " + ' $PSVersionTable.PSVersion.ToString() + " @ " + [environment]::OSVersion.VersionString'
+$ProfileContent += "`n" + '$Host.UI.RawUI.WindowTitle +=' + "'$HostTitle' + " + ' $PSVersionTable.PSVersion.ToString() + " @ " + [environment]::OSVersion.VersionString'
 
-Out-File -FilePath $ProfilePath -Encoding utf8 -InputObject $ProfileContent
+$ProfileContent += @'
+
+# Welcome
+Write-Host @"
+    ____ _       _______ __  __
+   / __ \ |     / / ___// / / /
+  / /_/ / | /| / /\__ \/ /_/ / 
+ / ____/| |/ |/ /___/ / __  /  
+/_/     |__/|__//____/_/ /_/   
+
+"@ -ForegroundColor Blue
+'@
+
+Out-File -FilePath $ProfilePath\Microsoft.PowerShell_profile.ps1 -Encoding utf8 -InputObject $ProfileContent

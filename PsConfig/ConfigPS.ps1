@@ -10,7 +10,7 @@ param (
 ###################################################
 ###                                             ###
 ###       PowerShell Configuration Script       ###
-###                                      v1.3b  ###
+###                                      v1.4c  ###
 ###                                             ###
 ###################################################
 '@
@@ -42,49 +42,49 @@ if (([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]:
         'Full'
         {
             Write-Host '[Info] Full Mode: All configuration will be installed/refreshed'
-            .\AutoConfig\InstallPoshModules.ps1
-            .\AutoConfig\WriteProfile.ps1 -PSType $PSType
-            .\AutoConfig\WritePoshTheme.ps1 -PSType $PSType
-            .\AutoConfig\SetColor.ps1
-            .\AutoConfig\InstallApps.ps1
-            .\AutoConfig\UpdateRegistry.ps1
-            .\AutoConfig\UpdateShortcuts.ps1
-            .\AutoConfig\WriteStub.ps1 -PSType $PSType
+            & $PSScriptRoot\AutoConfig\InstallPoshModules.ps1
+            & $PSScriptRoot\AutoConfig\WriteProfile.ps1 -PSType $PSType
+            & $PSScriptRoot\AutoConfig\WritePoshTheme.ps1 -PSType $PSType
+            & $PSScriptRoot\AutoConfig\SetColor.ps1
+            & $PSScriptRoot\AutoConfig\InstallApps.ps1
+            & $PSScriptRoot\AutoConfig\UpdateRegistry.ps1
+            & $PSScriptRoot\AutoConfig\UpdateShortcuts.ps1
+            & $PSScriptRoot\AutoConfig\WriteStub.ps1 -PSType $PSType
             break
         }
         'Profile'
         {
             Write-Host '[Info] Profile Mode: Will refresh PowerShell user profile and PoshTheme'
-            .\AutoConfig\WriteProfile.ps1 -PSType $PSType
-            .\AutoConfig\WritePoshTheme.ps1 -PSType $PSType
+            & $PSScriptRoot\AutoConfig\WriteProfile.ps1 -PSType $PSType
+            & $PSScriptRoot\AutoConfig\WritePoshTheme.ps1 -PSType $PSType
             break
         }
         'TerminalStyle'
         {
             Write-Host '[Info] Terminal Style Mode: Will refresh color scheme and update refresh settings'
-            .\AutoConfig\SetColor.ps1
-            .\AutoConfig\UpdateRegistry.ps1
-            .\AutoConfig\UpdateShortcuts.ps1
+            & $PSScriptRoot\AutoConfig\SetColor.ps1
+            & $PSScriptRoot\AutoConfig\UpdateRegistry.ps1
+            & $PSScriptRoot\AutoConfig\UpdateShortcuts.ps1
             break
         }
         'ModuleInstall'
         {
             Write-Host '[Info] Module Installation Mode: Will install/update posh modules and refresh PowerShell user profile and PoshTheme'
-            .\AutoConfig\InstallPoshModules.ps1
-            .\AutoConfig\WriteProfile.ps1 -PSType $PSType
-            .\AutoConfig\WritePoshTheme.ps1 -PSType $PSType
+            & $PSScriptRoot\AutoConfig\InstallPoshModules.ps1
+            & $PSScriptRoot\AutoConfig\WriteProfile.ps1 -PSType $PSType
+            & $PSScriptRoot\AutoConfig\WritePoshTheme.ps1 -PSType $PSType
             break
         }
         'AppInstall'
         {
             Write-Host '[Info] App Installation Mode: Will install chocolatey, git, Sudo, ColorTool and Cascadia fonts'
-            .\AutoConfig\InstallApps.ps1
+            & $PSScriptRoot\AutoConfig\InstallApps.ps1
             break
         }
         'StubOnly'
         {
             Write-Host '[Info] Stub Only Mode: Will copy this script to user PowerShell scripts folder'
-            .\AutoConfig\WriteStub.ps1 -PSType $PSType
+            & $PSScriptRoot\AutoConfig\WriteStub.ps1 -PSType $PSType
             break
         }
         Default {}
