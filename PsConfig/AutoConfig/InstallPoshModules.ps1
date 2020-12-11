@@ -15,8 +15,7 @@ if ($null -eq (Get-Module -Name 'oh-my-posh'))
     {
         Write-Host '[Error] Unable to Install Module' -ForegroundColor Red
         Write-Host 'Script Aborted' -ForegroundColor Red
-        Pause
-        Exit
+        throw 'Failed to Install Module'
     }
 }
 else

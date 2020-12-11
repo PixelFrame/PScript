@@ -8,10 +8,13 @@ param (
     $ResetAutoProxy,
 
     [switch]
-    $SaveScript
+    $SaveScript,
+
+    [string]
+    $PacUrl = $null
 )
 
-# .NET P/INVOKE
+# WinHTTP P/Invoke C# Def
 $Win32CallDef = @'
     using System;
     using System.Runtime.InteropServices;
@@ -308,6 +311,31 @@ if ($Url.Length -gt 0)
         $AutoProxyOptions = New-Object WINHTTP_AUTOPROXY_OPTIONS
         $AutoProxyOptions.dwFlags = [AutoProxyFlag]::WINHTTP_AUTOPROXY_CONFIG_URL
         $AutoProxyOptions.lpszAutoConfigUrl = $IEPacAddr
+        $AutoProxyOptions.fAutoLogonIfChallenged = $true
+
+        $ProxyInfo = New-Object WINHTTP_PROXY_INFO
+
+        if ([WinHttp]::WinHttpGetProxyForUrl($SessionHandle, $Url, [ref] $AutoProxyOptions, [ref] $ProxyInfo))
+        {
+            PrintProxyInfo $ProxyInfo
+        }
+        else 
+        {
+            $ErrorCode = [System.Runtime.InteropServices.Marshal]::GetLastWin32Error()
+            "    Win32 Call: WinHttpGetProxyForUrl IE PAC Failed. Error Code: $ErrorCode"
+        }
+
+        [WinHttp]::WinHttpCloseHandle($SessionHandle) | Out-Null
+    }
+    if ($null -ne $PacUrl)
+    {
+        Write-Host "`nWinHttpGetProxyForUrl with Manual PAC" -ForegroundColor Blue
+
+        $SessionHandle = [WinHttp]::WinHttpOpen("PWSH PINVOKE WINHTTP CLIENT/1.0", [AccessType]::WINHTTP_ACCESS_TYPE_NO_PROXY, "", "", 0);
+
+        $AutoProxyOptions = New-Object WINHTTP_AUTOPROXY_OPTIONS
+        $AutoProxyOptions.dwFlags = [AutoProxyFlag]::WINHTTP_AUTOPROXY_CONFIG_URL
+        $AutoProxyOptions.lpszAutoConfigUrl = $PacUrl
         $AutoProxyOptions.fAutoLogonIfChallenged = $true
 
         $ProxyInfo = New-Object WINHTTP_PROXY_INFO
