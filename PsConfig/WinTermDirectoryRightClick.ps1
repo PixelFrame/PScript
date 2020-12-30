@@ -3,7 +3,7 @@
 # Locate Windows Terminal Root Folder and User Executable
 
 $WinTermRoot = (Get-ChildItem -Path 'HKCU:\SOFTWARE\Classes\Local Settings\Software\Microsoft\Windows\CurrentVersion\AppModel\Repository\Packages' `
-    | Where-Object { $_.Name -like '*WindowsTerminal*' }).GetValue('PackageRootFolder')
+    | Where-Object { $_.Name -like '*WindowsTerminal*' })[0].GetValue('PackageRootFolder') # In case 2 versions of Windows Terminal are installed
 
 if ($null -eq $WinTermRoot)
 {

@@ -148,7 +148,7 @@ while ($Continue)
     if ($NmcapProcess.HasExited) 
     {
         Write-Host "`nNMCap Process Exited Unexpectedly! Script Terminated!" -ForegroundColor Red
-        Write-Host "This could caused by an unexpected ICMP packet to/from IP address 4.3.2.1 or not running NMCap as Administrator (No bound interface is found)" -ForegroundColor Red
+        Write-Host "This could be caused by an unexpected ICMP packet to/from IP address 4.3.2.1 or not running NMCap as Administrator (No bound interface is found)" -ForegroundColor Red
         Pause
         Exit
     }
