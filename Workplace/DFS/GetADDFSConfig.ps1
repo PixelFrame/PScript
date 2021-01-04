@@ -1,15 +1,40 @@
-$Namespaces = Get-ADObject -Filter 'ObjectClass -eq "msDFS-Namespacev2"' -SearchBase 'CN=Dfs-Configuration,CN=System,DC=shlth,DC=vlab' -SearchScope Subtree -Properties *
-$Links = Get-ADObject -Filter 'ObjectClass -eq "msDFS-Linkv2"' -SearchBase 'CN=Dfs-Configuration,CN=System,DC=shlth,DC=vlab' -SearchScope Subtree -Properties *
+[CmdletBinding()]
+param (
+    [Parameter(Mandatory = $true)]
+    [string]
+    $Domain,
+
+    [string]
+    $Namespace = '*'
+)
+
+if ($Namespace -eq '*')
+{
+    $DN = "CN=Dfs-Configuration,CN=System"
+}
+else
+{
+    $DN = "CN=$Namespace,CN=Dfs-Configuration,CN=System"
+}
+$DomainSplits = $Domain.Split('.')
+foreach ($DomainSplit in $DomainSplits)
+{
+    $DN += ",DC=$DomainSplit"
+}
+
+"Search DN: $DN"
+$ObjNamespaces = Get-ADObject -Filter 'ObjectClass -eq "msDFS-Namespacev2"' -SearchBase $DN -SearchScope Subtree -Properties *
+$Links = Get-ADObject -Filter 'ObjectClass -eq "msDFS-Linkv2"' -SearchBase $DN -SearchScope Subtree -Properties *
 
 $ArrNamespace = @()
-foreach ($Namespace in $Namespaces)
+foreach ($ObjNamespace in $ObjNamespaces)
 {
-    $Targets = [System.Text.Encoding]::Unicode.GetString($Namespace.'msDFS-TargetListv2')
+    $Targets = [System.Text.Encoding]::Unicode.GetString($ObjNamespace.'msDFS-TargetListv2')
     $ArrNamespace += [PSCustomObject] @{
-        CN      = $Namespace.cn
-        Prop    = $Namespace.'msDFS-Propertiesv2';
+        CN      = $ObjNamespace.cn
+        Prop    = $ObjNamespace.'msDFS-Propertiesv2';
         Targets = $Targets;
-        TTL     = $Namespace.'msDFS-Ttlv2'
+        TTL     = $ObjNamespace.'msDFS-Ttlv2'
     }
 }
 
@@ -27,5 +52,5 @@ foreach ($Link in $Links)
     }
 }
 
-$ArrNamespace | Format-List
-$ArrLink | Format-List
+$ArrNamespace | Out-GridView -Title 'DFS Namespaces'
+$ArrLink | Out-GridView -Title 'DFS Folder Targets'
