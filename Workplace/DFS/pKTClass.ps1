@@ -68,27 +68,27 @@ class pKT
         $this.Version = Convert-LEBytesToUInt32 $BLOBVersion
         $this.lementCount = Convert-LEBytesToUInt32 $BLOBElementCount
 
-        $BLOBElement = Get-SubArray -Source $Data -StartIndex 8 -Length ($Data.Length - 8)
-        $this.CreateElements($BLOBElement)
+        $BLOBElements = Get-SubArray -Source $Data -StartIndex 8 -Length ($Data.Length - 8)
+        $this.CreateElements($BLOBElements)
     }
 
-    [void] CreateElements([byte[]] $BLOBElement)
+    [void] CreateElements([byte[]] $BLOBElements)
     {
         $CreatedCount = 0
         $StartIndex = 0
-        while ($CreatedCount -lt $this.ElementCount)
+        while ($CreatedCount++ -lt $this.ElementCount)
         {
             $Element = New-Object DFSNamespaceElement
-            $BLOBNameSize = Get-SubArray -Source $BLOBElement -StartIndex $StartIndex -Length 2
+            $BLOBNameSize = Get-SubArray -Source $BLOBElements -StartIndex $StartIndex -Length 2
             $StartIndex += 2
             $Element.NameSize = Convert-LEBytesToUInt16 -Bytes $BLOBNameSize
-            $BLOBName = Get-SubArray -Source $BLOBElement -StartIndex $StartIndex -Length $Element.NameSize
+            $BLOBName = Get-SubArray -Source $BLOBElements -StartIndex $StartIndex -Length $Element.NameSize
             $StartIndex += $Element.NameSize
             $Element.Name = Convert-LEBytesToString -Bytes $BLOBName
-            $BLOBDataSize = Get-SubArray -Source $BLOBElement -StartIndex $StartIndex -Length 4
+            $BLOBDataSize = Get-SubArray -Source $BLOBElements -StartIndex $StartIndex -Length 4
             $StartIndex += 4
             $Element.DataSize = Convert-LEBytesToUInt32 -Bytes $BLOBDataSize
-            $BLOBData = Get-SubArray -Source $BLOBElement -StartIndex $StartIndex -Length $Element.DataSize
+            $BLOBData = Get-SubArray -Source $BLOBElements -StartIndex $StartIndex -Length $Element.DataSize
             $Element.SetData($BLOBData)
             $StartIndex += $Element.DataSize
             $this.Elements += $Element
@@ -101,24 +101,23 @@ class DFSNamespaceElement
     [uint16] $NameSize;
     [string] $Name;
     [uint32] $DataSize;
-    [DFSNamespaceRoot] $DataRoot;
-    [DFSNamespaceLink] $DataLink;
+    [DFSNamespaceRootOrLink] $DataRootOrLink;
     [SiteInformation] $DataSite;
 
     [void] SetData($BLOBData)
     {
         switch ($this.Name)
         {
-            '\domainroot' { $this.DataRoot = [DFSNamespaceRoot] $BLOBData }
+            '\domainroot' { $this.DataRootOrLink = [DFSNamespaceRootOrLink] $BLOBData }
             '\siteroot' { $this.DataSite = [SiteInformation]$BLOBData }
-            Default { $this.DataLink = [DFSNamespaceLink]$BLOBData }
+            Default { $this.DataLink = [DFSNamespaceRootOrLink]$BLOBData }
         }
     }
 }
 
-class DFSNamespaceRoot
+class DFSNamespaceRootOrLink
 {
-    [guid] $RootGuid;
+    [guid] $RootOrLinkGuid;
     [uint16] $PrefixSize;
     [string] $Prefix;
     [uint16] $ShortPrefixSize;
@@ -142,7 +141,7 @@ class DFSNamespaceRoot
         $StartIndex = 0
 
         $BLOBGuid = Get-SubArray -Source $BLOBData -StartIndex $StartIndex -Length 16
-        $this.RootGuid = [Guid] $BLOBGuid
+        $this.RootOrLinkGuid = [Guid] $BLOBGuid
         $StartIndex += 16
 
         $BLOBPrefixSize = Get-SubArray -Source $BLOBData -StartIndex $StartIndex -Length 2
@@ -220,29 +219,168 @@ class DFSNamespaceRoot
     }
 }
 
-class DFSNamespaceLink
-{
-    
-}
-
 class SiteInformation
 {
-    
+    [Guid] $SiteTableGuid;
+    [uint32] $SiteEntryCount;
+    [SiteEntry[]] $SiteEntries;
+
+    SiteInformation([byte[]] $BLOBData)
+    {
+        $StartIndex = 0
+
+        $BLOBGuid = Get-SubArray -Source $BLOBData -StartIndex $StartIndex -Length 16
+        $this.SiteTableGuid = [Guid] $BLOBGuid
+        $StartIndex += 16
+
+        $BLOBSiteEntryCount = Get-SubArray -Source $BLOBData -StartIndex $StartIndex -Length 4
+        $this.SiteEntryCount = Convert-LEBytesToUInt32 $BLOBSiteEntryCount
+        $StartIndex += 4
+
+        $BLOBSiteEntries = Get-SubArray -Source $BLOBData -StartIndex $StartIndex -Length ($BLOBData - 20)
+        CreateEntries($BLOBSiteEntries)
+    }
+
+    [void] CreateEntries([byte[]] $BLOBSiteEntries)
+    {
+        $CreatedCount = 0
+        $StartIndex = 0
+        while ($CreatedCount++ -lt $this.SiteEntryCount)
+        {
+            $Entry = New-Object SiteEntry
+
+            $BLOBServerNameSize = Get-SubArray -Source $BLOBSiteEntries -StartIndex $StartIndex -Length 2
+            $Entry.ServerNameSize = Convert-LEBytesToUInt16 -Bytes $BLOBServerNameSize
+            $StartIndex += 2
+
+            $BLOBServerName = Get-SubArray -Source $BLOBSiteEntries -StartIndex $StartIndex -Length $Entry.ServerNameSize
+            $Entry.ServerName = Convert-LEBytesToString -Bytes $BLOBServerName
+            $StartIndex += $Entry.ServerNameSize
+
+            $BLOBSiteNameInfoCount = Get-SubArray -Source $BLOBSiteEntries -StartIndex $StartIndex -Length 4
+            $Entry.SiteNameInfoCount = Convert-LEBytesToUInt16 -Bytes $BLOBSiteNameInfoCount
+            $StartIndex += 4
+
+            $SiteNameInfoCreatedCount = 0
+            while ($SiteNameInfoCreatedCount++ -lt $Entry.SiteNameInfoCount)
+            {
+                $Info = New-Object SiteNameInfo
+
+                $BLOBFlags = Get-SubArray -Source $BLOBSiteEntries -StartIndex $StartIndex -Length 4
+                $Info.Flags = Convert-LEBytesToUInt32 $BLOBFlags
+                $StartIndex += 4
+
+                $BLOBSiteNameSize = Get-SubArray -Source $BLOBSiteEntries -StartIndex $StartIndex -Length 2
+                $Info.SiteNameSize = Convert-LEBytesToUInt16 $BLOBSiteNameSize
+                $StartIndex += 2
+
+                $BLOBSiteName = Get-SubArray -Source $BLOBSiteEntries -StartIndex $StartIndex -Length $Info.SiteNameSize
+                $Info.SiteName = Convert-LEBytesToString $BLOBSiteName
+                $StartIndex += $Info.SiteNameSize
+
+                $Entry.SiteNameInfo += $Info
+            }
+
+            $this.SiteEntries += $Entry
+        }
+    }
 }
 
 class TargetList
 {
-    [uint32] $TargetCount
-    [TargetEntry[]] $TargetEntries
+    [uint32] $TargetCount;
+    [TargetEntry[]] $TargetEntries;
+
+    TargetList([byte[]] $BLOBTargetList)
+    {
+        $BLOBTargetCount = Get-SubArray -Source $BLOBTargetList -StartIndex 0 -Length 4
+        $this.TargetCount = Convert-LEBytesToUInt32 $BLOBTargetCount
+        $BLOBTargetEntries = Get-SubArray -Source $BLOBTargetList -StartIndex 4 -Length ($BLOBTargetList.Length - 4)
+        CreateEntries($BLOBTargetEntries)
+    }
+
+    [void] CreateEntries([byte[]] $BLOBTargetEntries)
+    {
+        $CreatedCount = 0
+        $StartIndex = 0
+        while ($CreatedCount++ -lt $this.TargetCount)
+        {
+            $Entry = New-Object TargetEntry
+
+            $BLOBTargetEntrySize = Get-SubArray -Source $BLOBTargetEntries -StartIndex $StartIndex -Length 4
+            $Entry.TargetEntrySize = Convert-LEBytesToUInt32 $BLOBTargetEntrySize
+            $StartIndex += 4
+
+            $BLOBTargetTimeStamp = Get-SubArray -Source $BLOBTargetEntries -StartIndex $StartIndex -Length 8
+            $Entry.TargetTimeStamp = [TimeStamp]$BLOBTargetTimeStamp
+            $StartIndex += 8
+
+            $BLOBTargetState = Get-SubArray -Source $BLOBTargetEntries -StartIndex $StartIndex -Length 4
+            $Entry.TargetState = Convert-LEBytesToUInt32 $BLOBTargetState
+            $StartIndex += 4
+
+            $BLOBTargetType = Get-SubArray -Source $BLOBTargetEntries -StartIndex $StartIndex -Length 4
+            $Entry.TargetType = Convert-LEBytesToUInt32 $BLOBTargetType
+            $StartIndex += 4
+
+            $BLOBServerNameSize = Get-SubArray -Source $BLOBTargetEntries -StartIndex $StartIndex -Length 2
+            $Entry.ServerNameSize = Convert-LEBytesToUInt16 $BLOBServerNameSize
+            $StartIndex += 2
+
+            $BLOBServerName = Get-SubArray -Source $BLOBTargetEntries -StartIndex $StartIndex -Length $Entry.ServerNameSize
+            $Entry.ServerName = Convert-LEBytesToString $BLOBServerName
+            $StartIndex += $Entry.ServerNameSize
+
+            $BLOBShareNameSize = Get-SubArray -Source $BLOBTargetEntries -StartIndex $StartIndex -Length 2
+            $Entry.ShareNameSize = Convert-LEBytesToUInt16 $BLOBShareNameSize
+            $StartIndex += 2
+
+            $BLOBShareName = Get-SubArray -Source $BLOBTargetEntries -StartIndex $StartIndex -Length $Entry.ShareNameSize
+            $Entry.ShareName = Convert-LEBytesToString $BLOBShareName
+            $StartIndex += $Entry.ShareNameSize
+
+            $this.TargetEntries += $Entry
+        }
+    }
 }
 
 class TargetEntry
 {
-    
+    [uint32] $TargetEntrySize;
+    [TimeStamp] $TargetTimeStamp;
+    [byte] $PriorityRank;
+    [byte] $PriorityClass;
+    [uint32] $TargetState;
+    [uint32] $TargetType;
+    [uint16] $ServerNameSize;
+    [string] $ServerName;
+    [uint16] $ShareNameSize;
+    [string] $ShareName;
+}
+
+class SiteEntry
+{
+    [uint16] $ServerNameSize;
+    [string] $ServerName;
+    [uint32] $SiteNameInfoCount;
+    [SiteNameInfo[]] $SiteNameInfo;
+}
+
+class SiteNameInfo
+{
+    [uint32] $Flags;
+    [uint16] $SiteNameSize;
+    [string] $SiteName;
 }
 
 class TimeStamp
 {
     [uint32] $dwLowDateTime;
     [uint32] $dwHighDateTime;
+
+    TimeStamp([byte[]] $BLOBTimeStamp)
+    {
+        $this.dwLowDateTime = Convert-LEBytesToUInt32 (Get-SubArray -Source $BLOBTimeStamp -StartIndex 0 -Length 4)
+        $this.dwHighDateTime = Convert-LEBytesToUInt32 (Get-SubArray -Source $BLOBTimeStamp -StartIndex 4 -Length 4)
+    }
 }
