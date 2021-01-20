@@ -4,12 +4,12 @@
 function Get-SubArray
 {
     param (
-        [object[]] $Source,
+        [byte[]] $Source,
         [int] $StartIndex,
         [int] $Length
     )
     
-    $Result = New-Object 'Object[]' -ArgumentList $Length
+    $Result = New-Object 'byte[]' -ArgumentList $Length
     [Array]::Copy($Source, $StartIndex, $Result, 0, $Length);
     return $Result
 }
@@ -51,7 +51,8 @@ function Convert-LEBytesToString
     param (
         [byte[]] $Bytes
     )
-    [System.Text.Encoding]::Unicode.GetString($Bytes)
+    if ($null -eq $Bytes) { return '' }
+    return [System.Text.Encoding]::Unicode.GetString($Bytes)
 }
 
 class pKT
@@ -66,7 +67,7 @@ class pKT
         $BLOBElementCount = Get-SubArray -Source $Data -StartIndex 4 -Length 4
 
         $this.Version = Convert-LEBytesToUInt32 $BLOBVersion
-        $this.lementCount = Convert-LEBytesToUInt32 $BLOBElementCount
+        $this.ElementCount = Convert-LEBytesToUInt32 $BLOBElementCount
 
         $BLOBElements = Get-SubArray -Source $Data -StartIndex 8 -Length ($Data.Length - 8)
         $this.CreateElements($BLOBElements)
@@ -104,13 +105,13 @@ class DFSNamespaceElement
     [DFSNamespaceRootOrLink] $DataRootOrLink;
     [SiteInformation] $DataSite;
 
-    [void] SetData($BLOBData)
+    [void] SetData([byte[]] $BLOBData)
     {
         switch ($this.Name)
         {
-            '\domainroot' { $this.DataRootOrLink = [DFSNamespaceRootOrLink] $BLOBData }
-            '\siteroot' { $this.DataSite = [SiteInformation]$BLOBData }
-            Default { $this.DataLink = [DFSNamespaceRootOrLink]$BLOBData }
+            '\domainroot' { $this.DataRootOrLink = [DFSNamespaceRootOrLink]::new($BLOBData) }
+            '\siteroot' { $this.DataSite = [SiteInformation]::new($BLOBData) }
+            Default { $this.DataLink = [DFSNamespaceRootOrLink]::new($BLOBData) }
         }
     }
 }
@@ -136,12 +137,12 @@ class DFSNamespaceRootOrLink
     [uint32] $ReservedBlob;
     [uint32] $ReferralTTL;
 
-    DFSNamespaceRoot([byte[]] $BLOBData)
+    DFSNamespaceRootOrLink([byte[]] $BLOBData)
     {
         $StartIndex = 0
 
         $BLOBGuid = Get-SubArray -Source $BLOBData -StartIndex $StartIndex -Length 16
-        $this.RootOrLinkGuid = [Guid] $BLOBGuid
+        $this.RootOrLinkGuid = [Guid][byte[]] $BLOBGuid
         $StartIndex += 16
 
         $BLOBPrefixSize = Get-SubArray -Source $BLOBData -StartIndex $StartIndex -Length 2
@@ -177,15 +178,15 @@ class DFSNamespaceRootOrLink
         $StartIndex += $this.CommentSize
 
         $BLOBPrefixTimeStamp = Get-SubArray -Source $BLOBData -StartIndex $StartIndex -Length 8
-        $this.PrefixTimeStamp = [TimeStamp] $BLOBPrefixTimeStamp
+        $this.PrefixTimeStamp = [TimeStamp][byte[]] $BLOBPrefixTimeStamp
         $StartIndex += 8
 
         $BLOBStateTimeStamp = Get-SubArray -Source $BLOBData -StartIndex $StartIndex -Length 8
-        $this.StateTimeStamp = [TimeStamp] $BLOBStateTimeStamp
+        $this.StateTimeStamp = [TimeStamp][byte[]] $BLOBStateTimeStamp
         $StartIndex += 8
 
         $BLOBCommentTimeStamp = Get-SubArray -Source $BLOBData -StartIndex $StartIndex -Length 8
-        $this.CommentTimeStamp = [TimeStamp] $BLOBCommentTimeStamp
+        $this.CommentTimeStamp = [TimeStamp][byte[]] $BLOBCommentTimeStamp
         $StartIndex += 8
 
         $BLOBVersion = Get-SubArray -Source $BLOBData -StartIndex $StartIndex -Length 4
@@ -197,16 +198,16 @@ class DFSNamespaceRootOrLink
         $StartIndex += 4
 
         $BLOBTargetList = Get-SubArray -Source $BLOBData -StartIndex $StartIndex -Length $this.TargetListSize
-        $this.TargetList = [TargetList] $BLOBTargetList
+        $this.TargetList = [TargetList][byte[]] $BLOBTargetList
         $StartIndex += $this.TargetListSize
 
         $BLOBReservedBlobSize = Get-SubArray -Source $BLOBData -StartIndex $StartIndex -Length 4
         $this.ReservedBlobSize = Convert-LEBytesToUInt32 $BLOBReservedBlobSize
         $StartIndex += 4
 
-        $BLOBReservedBlob = Get-SubArray -Source $BLOBData -StartIndex $StartIndex -Length $BLOBReservedBlobSize
+        $BLOBReservedBlob = Get-SubArray -Source $BLOBData -StartIndex $StartIndex -Length $this.ReservedBlobSize
         $this.ReservedBlob = Convert-LEBytesToUInt32 $BLOBReservedBlob
-        $StartIndex += $BLOBReservedBlobSize
+        $StartIndex += $this.ReservedBlobSize
 
         $BLOBReferralTTL = Get-SubArray -Source $BLOBData -StartIndex $StartIndex -Length 4
         $this.ReferralTTL = Convert-LEBytesToUInt32 $BLOBReferralTTL
@@ -230,15 +231,15 @@ class SiteInformation
         $StartIndex = 0
 
         $BLOBGuid = Get-SubArray -Source $BLOBData -StartIndex $StartIndex -Length 16
-        $this.SiteTableGuid = [Guid] $BLOBGuid
+        $this.SiteTableGuid = [Guid][byte[]] $BLOBGuid
         $StartIndex += 16
 
         $BLOBSiteEntryCount = Get-SubArray -Source $BLOBData -StartIndex $StartIndex -Length 4
         $this.SiteEntryCount = Convert-LEBytesToUInt32 $BLOBSiteEntryCount
         $StartIndex += 4
 
-        $BLOBSiteEntries = Get-SubArray -Source $BLOBData -StartIndex $StartIndex -Length ($BLOBData - 20)
-        CreateEntries($BLOBSiteEntries)
+        $BLOBSiteEntries = Get-SubArray -Source $BLOBData -StartIndex $StartIndex -Length ($BLOBData.Length - 20)
+        $this.CreateEntries($BLOBSiteEntries)
     }
 
     [void] CreateEntries([byte[]] $BLOBSiteEntries)
@@ -296,7 +297,7 @@ class TargetList
         $BLOBTargetCount = Get-SubArray -Source $BLOBTargetList -StartIndex 0 -Length 4
         $this.TargetCount = Convert-LEBytesToUInt32 $BLOBTargetCount
         $BLOBTargetEntries = Get-SubArray -Source $BLOBTargetList -StartIndex 4 -Length ($BLOBTargetList.Length - 4)
-        CreateEntries($BLOBTargetEntries)
+        $this.CreateEntries($BLOBTargetEntries)
     }
 
     [void] CreateEntries([byte[]] $BLOBTargetEntries)
@@ -312,7 +313,7 @@ class TargetList
             $StartIndex += 4
 
             $BLOBTargetTimeStamp = Get-SubArray -Source $BLOBTargetEntries -StartIndex $StartIndex -Length 8
-            $Entry.TargetTimeStamp = [TimeStamp]$BLOBTargetTimeStamp
+            $Entry.TargetTimeStamp = [TimeStamp][byte[]] $BLOBTargetTimeStamp
             $StartIndex += 8
 
             $BLOBTargetState = Get-SubArray -Source $BLOBTargetEntries -StartIndex $StartIndex -Length 4
