@@ -95,6 +95,19 @@ class pKT
             $this.Elements += $Element
         }
     }
+
+    [void] Print()
+    {
+        $this.Print('All')
+    }
+    [void] Print([string] $Type)
+    {
+        foreach ($Element in $this.Elements)
+        {
+            Write-Host $Element.Name -ForegroundColor DarkBlue -BackgroundColor White
+            $Element.Print($Type)
+        }
+    }
 }
 
 class DFSNamespaceElement
@@ -111,7 +124,29 @@ class DFSNamespaceElement
         {
             '\domainroot' { $this.DataRootOrLink = [DFSNamespaceRootOrLink]::new($BLOBData) }
             '\siteroot' { $this.DataSite = [SiteInformation]::new($BLOBData) }
-            Default { $this.DataLink = [DFSNamespaceRootOrLink]::new($BLOBData) }
+            Default { $this.DataRootOrLink = [DFSNamespaceRootOrLink]::new($BLOBData) }
+        }
+    }
+
+    [void] Print([string] $Type)
+    {
+        if ($Type -eq 'Root' -and $this.Name -ne '\domainroot')
+        {
+            return
+        }
+        if ($Type -eq 'Site' -and $this.Name -ne '\siteroot')
+        {
+            return
+        }
+        if ($Type -eq 'Link' -and $this.Name -notmatch '\\domainroot\\')
+        {
+            return
+        }
+        switch ($this.Name)
+        {
+            '\domainroot' { $this.DataRootOrLink.Print() }
+            '\siteroot' { $this.DataSite.Print() }
+            Default { $this.DataRootOrLink.Print() }
         }
     }
 }
@@ -218,6 +253,18 @@ class DFSNamespaceRootOrLink
             Write-Host '[Warning] Inconsistent Data Length!' -ForegroundColor Yellow
         }
     }
+
+    [void] Print()
+    {
+        $Padding = '    '
+        Write-Host ($Padding + "Prefix     : " + $this.Prefix)
+        Write-Host ($Padding + "Type       : " + $this.Type)
+        Write-Host ($Padding + "State      : " + $this.State)
+        Write-Host ($Padding + "Comment    : " + ($this.Comment))
+        Write-Host ($Padding + "TTL        : " + $this.ReferralTTL)
+        Write-Host ($Padding + "TargetList : ")
+        $this.TargetList.Print()
+    }
 }
 
 class SiteInformation
@@ -285,6 +332,14 @@ class SiteInformation
             $this.SiteEntries += $Entry
         }
     }
+
+    [void] Print()
+    {
+        foreach ($SiteEntry in $this.SiteEntries)
+        {
+            $SiteEntry.Print()
+        }
+    }
 }
 
 class TargetList
@@ -312,6 +367,7 @@ class TargetList
             $Entry.TargetEntrySize = Convert-LEBytesToUInt32 $BLOBTargetEntrySize
             $StartIndex += 4
 
+            # TODO: Priority is not set here, only set TimeStamp
             $BLOBTargetTimeStamp = Get-SubArray -Source $BLOBTargetEntries -StartIndex $StartIndex -Length 8
             $Entry.TargetTimeStamp = [TimeStamp][byte[]] $BLOBTargetTimeStamp
             $StartIndex += 8
@@ -343,6 +399,16 @@ class TargetList
             $this.TargetEntries += $Entry
         }
     }
+
+    [void] Print()
+    {
+        $Padding = '        '
+        Write-Host ($Padding + "State`tType`tServerName`t`t`tShareName")
+        foreach ($TargetEntry in $this.TargetEntries)
+        {
+            Write-Host ($Padding + $TargetEntry.TargetState + "`t" + $TargetEntry.TargetType + "`t" + $TargetEntry.ServerName + "`t`t`t" + $TargetEntry.ShareName)
+        }
+    }
 }
 
 class TargetEntry
@@ -365,6 +431,17 @@ class SiteEntry
     [string] $ServerName;
     [uint32] $SiteNameInfoCount;
     [SiteNameInfo[]] $SiteNameInfo;
+
+    [void] Print()
+    {
+        $Padding = '    '
+        Write-Host ($Padding + $this.ServerName)
+        $Padding += '    '
+        foreach ($Info in $this.SiteNameInfo)
+        {
+            Write-Host ($Padding + 'SiteName: ' + $Info.SiteName)
+        }
+    }
 }
 
 class SiteNameInfo
@@ -384,4 +461,23 @@ class TimeStamp
         $this.dwLowDateTime = Convert-LEBytesToUInt32 (Get-SubArray -Source $BLOBTimeStamp -StartIndex 0 -Length 4)
         $this.dwHighDateTime = Convert-LEBytesToUInt32 (Get-SubArray -Source $BLOBTimeStamp -StartIndex 4 -Length 4)
     }
+}
+
+enum RootOrLinkType
+{
+    PKT_ENTRY_TYPE_DFS = 0x1;
+    PKT_ENTRY_TYPE_OUTSIDE_MY_DOM = 0x10;
+    PKT_ENTRY_TYPE_INSITE_ONLY = 0x20;
+    PKT_ENTRY_TYPE_COST_BASED_SITE_SELECTION = 0x40;
+    PKT_ENTRY_TYPE_REFERRAL_SVC = 0x80;
+    PKT_ENTRY_TYPE_ROOT_SCALABILITY = 0x200;
+    PKT_ENTRY_TYPE_TARGET_FAILBACK = 0x8000;
+}
+
+enum RootOrLinkState
+{
+    DFS_VOLUME_STATE_OK = 0x1;
+    RESERVED = 0x2;
+    DFS_VOLUME_STATE_OFFLINE = 0x3;
+    DFS_VOLUME_STATE_ONLINE = 0x4;
 }

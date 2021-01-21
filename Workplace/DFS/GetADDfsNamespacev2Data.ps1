@@ -5,7 +5,10 @@ param (
     $Domain,
 
     [string]
-    $Namespace = '*'
+    $Namespace = '*',
+
+    [string]
+    $TargetDC
 )
 
 if ($Namespace -eq '*')
@@ -23,7 +26,7 @@ foreach ($DomainSplit in $DomainSplits)
 }
 
 "Search DN: $DN"
-$ObjNamespaces = Get-ADObject -Filter 'ObjectClass -eq "msDFS-Namespacev2"' -SearchBase $DN -SearchScope Subtree -Properties *
+$ObjNamespaces = Get-ADObject -Filter 'ObjectClass -eq "msDFS-Namespacev2"' -SearchBase $DN -SearchScope Subtree -Properties * -Server $TargetDC
 $Links = Get-ADObject -Filter 'ObjectClass -eq "msDFS-Linkv2"' -SearchBase $DN -SearchScope Subtree -Properties *
 
 $ArrNamespace = @()
