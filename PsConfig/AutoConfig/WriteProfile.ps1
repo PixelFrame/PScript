@@ -23,14 +23,14 @@ if (!(Test-Path $ProfilePath\Scripts\Alias.ps1)) { New-Item -ItemType File -Path
 $ProfileContent += @"
 
 # Alias
-. $ProfilePath\Scripts\Alias.ps1
+. "$ProfilePath\Scripts\Alias.ps1"
 "@
 
 if (!(Test-Path $ProfilePath\Scripts\Functions.ps1)) { New-Item -ItemType File -Path $ProfilePath\Scripts\Functions.ps1 | Out-Null }
 $ProfileContent += @"
 
 # Functions
-. $ProfilePath\Scripts\Functions.ps1
+. "$ProfilePath\Scripts\Functions.ps1"
 "@
 
 $ProfileContent += @'
