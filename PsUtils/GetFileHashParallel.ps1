@@ -11,8 +11,8 @@ param (
     [string]
     $Output,
     
-    [Parameter]
-    [uint]
+    [Parameter()]
+    [int]
     $ThreadCount = 8
 )
 
