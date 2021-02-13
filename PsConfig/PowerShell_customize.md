@@ -144,4 +144,4 @@ Rename-Item -Path "$env:USERPROFILE\AppData\Roaming\Microsoft\Windows\Start Menu
 
 The auto configuration script for all the steps above. Will use chocolatey to install git, Cascadia Code font and ColorTool.
 
-[AutoConfig.ps1](https://github.com/PixelFrame/PScript/blob/master/PsConfig/AutoConfig.ps1)
+[ConfigPS.ps1](https://github.com/PixelFrame/PScript/blob/master/PsConfig/ConfigPS.ps1)
