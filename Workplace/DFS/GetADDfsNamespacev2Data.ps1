@@ -25,9 +25,14 @@ foreach ($DomainSplit in $DomainSplits)
     $DN += ",DC=$DomainSplit"
 }
 
+if ($TargetDC -eq '')
+{
+    $TargetDC = (Get-ADDomainController).HostName
+}
+
 "Search DN: $DN"
 $ObjNamespaces = Get-ADObject -Filter 'ObjectClass -eq "msDFS-Namespacev2"' -SearchBase $DN -SearchScope Subtree -Properties * -Server $TargetDC
-$Links = Get-ADObject -Filter 'ObjectClass -eq "msDFS-Linkv2"' -SearchBase $DN -SearchScope Subtree -Properties *
+$Links = Get-ADObject -Filter 'ObjectClass -eq "msDFS-Linkv2"' -SearchBase $DN -SearchScope Subtree -Properties * -Server $TargetDC
 
 $ArrNamespace = @()
 foreach ($ObjNamespace in $ObjNamespaces)
