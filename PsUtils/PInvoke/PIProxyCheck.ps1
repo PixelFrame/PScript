@@ -11,7 +11,7 @@ param (
     $SaveScript,
 
     [string]
-    $PacUrl = $null
+    $PacUrl
 )
 
 # WinHTTP P/Invoke C# Def
@@ -327,7 +327,7 @@ if ($Url.Length -gt 0)
 
         [WinHttp]::WinHttpCloseHandle($SessionHandle) | Out-Null
     }
-    if ($null -ne $PacUrl)
+    if ('' -ne $PacUrl)
     {
         Write-Host "`nWinHttpGetProxyForUrl with Manual PAC" -ForegroundColor Blue
 
