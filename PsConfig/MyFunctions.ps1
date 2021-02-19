@@ -114,6 +114,95 @@ function InvisibleRun
     return Start-Process -FilePath $PSExec -ArgumentList $PSArguments -WindowStyle Hidden -PassThru
 }
 
+function Get-FileProperties
+{
+    param (
+        [Parameter()]
+        [string]
+        $Path
+    )
+
+    $Item = Get-Item $Path -ErrorAction Stop
+    $ShellObj = New-Object -com Shell.Application
+    
+    if ($Item.GetType().ToString() -eq 'System.IO.DirectoryInfo')
+    {
+        $Folder = $ShellObj.NameSpace($Item.ToString())
+        $Folder.Self.InvokeVerb("Properties")
+    }
+    elseif ($Item.GetType().ToString() -eq 'System.IO.FileInfo')
+    {
+        $Folder = $ShellObj.NameSpace($Item.Directory.ToString())
+        $File = $Folder.ParseName($Item.Name)
+        $File.InvokeVerb("Properties")
+    }
+    else
+    {
+        throw 'Not a FileSystem Item!'
+    }
+}
+
+function Convert-HexToString
+{
+    param (
+        [Parameter()]
+        [string]
+        $HexString
+    )
+
+    $CsDef = @'
+using System;
+public class HexConv
+{
+    public static byte[] StringToByteArray(string hex)
+    {
+        if (hex.Length % 2 == 1)
+            return null;
+        byte[] arr = new byte[hex.Length >> 1];
+        for (int i = 0; i < hex.Length >> 1; ++i)
+        {
+            arr[i] = (byte)((GetHexVal(hex[i << 1]) << 4) + (GetHexVal(hex[(i << 1) + 1])));
+        }
+        return arr;
+    }
+
+    public static int GetHexVal(char hex) {
+        int val = (int)hex;
+        //For uppercase A-F letters:
+        //return val - (val < 58 ? 48 : 55);
+        //For lowercase a-f letters:
+        //return val - (val < 58 ? 48 : 87);
+        //Or the two combined, but a bit slower:
+        return val - (val < 58 ? 48 : (val < 97 ? 55 : 87));
+    }
+}
+'@
+
+    Add-Type -TypeDefinition $CsDef -ErrorAction SilentlyContinue
+    $HexString = $HexString.Replace(' ', '')
+    $HexString = $HexString.Replace(',', '')
+
+    $HexBytes = [HexConv]::StringToByteArray($HexString)
+    'ASCII: ' + [System.Text.Encoding]::ASCII.GetString($HexBytes)
+    ''
+    'Unicode: ' + [System.Text.Encoding]::Unicode.GetString($HexBytes)
+}
+
+function Convert-HexToNumber
+{
+    param (
+        [Parameter()]
+        [string]
+        $HexString
+    )
+
+    $Hexes = $HexString.Split(' ')
+    foreach ($Hex in $Hexes)
+    {
+        Write-Host ([Convert]::ToInt32($Hex, 16).ToString() + ' ') -NoNewline
+    }
+}
+
 function ConfigPS
 {
     param (
