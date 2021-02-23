@@ -120,7 +120,7 @@ catch
 
 function Write-Bin
 {
-    $Uris = @('https://github.com/microsoft/etl2pcapng/releases/download/v1.4.0/etl2pcapng.zip', 'https://github.com/ryanries/ETWSplitter/releases/download/v1.0/ETWSplitter.exe')
+    $Uris = @('https://github.com/microsoft/etl2pcapng/releases/download/v1.4.1/etl2pcapng.zip', 'https://github.com/ryanries/ETWSplitter/releases/download/v1.0/ETWSplitter.exe')
     $Retry = 3
     $WebClient = New-Object System.Net.WebClient
 
