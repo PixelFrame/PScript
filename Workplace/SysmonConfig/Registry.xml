@@ -1,0 +1,8 @@
+<Sysmon schemaversion="4.32">
+    <HashAlgorithms>SHA1</HashAlgorithms>
+    <EventFiltering>
+        <RegistryEvent onmatch="include">
+            <TargetObject condition="contains any">HKLM\SOFTWARE\Policies\Microsoft\Internet Explorer\Control Panel</TargetObject>
+        </RegistryEvent>
+    </EventFiltering>
+</Sysmon>
