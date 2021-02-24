@@ -55,7 +55,7 @@ function Convert-LEBytesToString
     return [System.Text.Encoding]::Unicode.GetString($Bytes)
 }
 
-class pKT
+class PKT
 {
     [uint32] $Version;
     [uint32] $ElementCount;
@@ -158,8 +158,8 @@ class DFSNamespaceRootOrLink
     [string] $Prefix;
     [uint16] $ShortPrefixSize;
     [string] $ShortPrefix;
-    [uint32] $Type;
-    [uint32] $State;
+    [RootOrLinkType] $Type;
+    [RootOrLinkState] $State;
     [uint16] $CommentSize;
     [string] $Comment;
     [TimeStamp] $PrefixTimeStamp;
@@ -197,11 +197,11 @@ class DFSNamespaceRootOrLink
         $StartIndex += $this.ShortPrefixSize
 
         $BLOBType = Get-SubArray -Source $BLOBData -StartIndex $StartIndex -Length 4
-        $this.Type = Convert-LEBytesToUInt32 $BLOBType
+        $this.Type = [Enum]::ToObject([RootOrLinkType], (Convert-LEBytesToUInt32 $BLOBType))
         $StartIndex += 4
 
         $BLOBState = Get-SubArray -Source $BLOBData -StartIndex $StartIndex -Length 4
-        $this.State = Convert-LEBytesToUInt32 $BLOBState
+        $this.State = [Enum]::ToObject([RootOrLinkState], (Convert-LEBytesToUInt32 $BLOBState))
         $StartIndex += 4
 
         $BLOBCommentSize = Get-SubArray -Source $BLOBData -StartIndex $StartIndex -Length 2
@@ -260,7 +260,7 @@ class DFSNamespaceRootOrLink
         Write-Host ($Padding + "Prefix     : " + $this.Prefix)
         Write-Host ($Padding + "Type       : " + $this.Type)
         Write-Host ($Padding + "State      : " + $this.State)
-        Write-Host ($Padding + "Comment    : " + ($this.Comment))
+        Write-Host ($Padding + "Comment    : " + $this.Comment)
         Write-Host ($Padding + "TTL        : " + $this.ReferralTTL)
         Write-Host ($Padding + "TargetList : ")
         $this.TargetList.Print()
@@ -373,7 +373,7 @@ class TargetList
             $StartIndex += 8
 
             $BLOBTargetState = Get-SubArray -Source $BLOBTargetEntries -StartIndex $StartIndex -Length 4
-            $Entry.TargetState = Convert-LEBytesToUInt32 $BLOBTargetState
+            $Entry.TargetState = [Enum]::ToObject([TargetState], (Convert-LEBytesToUInt32 $BLOBTargetState))
             $StartIndex += 4
 
             $BLOBTargetType = Get-SubArray -Source $BLOBTargetEntries -StartIndex $StartIndex -Length 4
@@ -403,10 +403,10 @@ class TargetList
     [void] Print()
     {
         $Padding = '        '
-        Write-Host ($Padding + "State`tType`tServerName`t`t`tShareName")
+        Write-Host ($Padding + "State`t`t`t`t`t`tType`t`t`tServerName`t`t`tShareName")
         foreach ($TargetEntry in $this.TargetEntries)
         {
-            Write-Host ($Padding + $TargetEntry.TargetState + "`t" + $TargetEntry.TargetType + "`t" + $TargetEntry.ServerName + "`t`t`t" + $TargetEntry.ShareName)
+            Write-Host ($Padding + $TargetEntry.TargetState + "`t`t`t" + $TargetEntry.TargetType + "`t`t`t" + $TargetEntry.ServerName + "`t`t`t" + $TargetEntry.ShareName)
         }
     }
 }
@@ -417,8 +417,8 @@ class TargetEntry
     [TimeStamp] $TargetTimeStamp;
     [byte] $PriorityRank;
     [byte] $PriorityClass;
-    [uint32] $TargetState;
-    [uint32] $TargetType;
+    [TargetState] $TargetState;
+    [uint32] $TargetType; # Should be 0x2
     [uint16] $ServerNameSize;
     [string] $ServerName;
     [uint16] $ShareNameSize;
@@ -446,7 +446,7 @@ class SiteEntry
 
 class SiteNameInfo
 {
-    [uint32] $Flags;
+    [uint32] $Flags; # Must be 0
     [uint16] $SiteNameSize;
     [string] $SiteName;
 }
@@ -463,7 +463,7 @@ class TimeStamp
     }
 }
 
-enum RootOrLinkType
+[Flags()] enum RootOrLinkType
 {
     PKT_ENTRY_TYPE_DFS = 0x1;
     PKT_ENTRY_TYPE_OUTSIDE_MY_DOM = 0x10;
@@ -474,10 +474,17 @@ enum RootOrLinkType
     PKT_ENTRY_TYPE_TARGET_FAILBACK = 0x8000;
 }
 
-enum RootOrLinkState
+[Flags()] enum RootOrLinkState
 {
     DFS_VOLUME_STATE_OK = 0x1;
     RESERVED = 0x2;
     DFS_VOLUME_STATE_OFFLINE = 0x3;
     DFS_VOLUME_STATE_ONLINE = 0x4;
+}
+
+[Flags()] enum TargetState
+{
+    DFS_STORAGE_STATE_OFFLINE = 0x1;
+    DFS_STORAGE_STATE_ONLINE = 0x2;
+    DFS_STORAGE_STATE_ACTIVE = 0x4;
 }
