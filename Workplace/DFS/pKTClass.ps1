@@ -367,9 +367,15 @@ class TargetList
             $Entry.TargetEntrySize = Convert-LEBytesToUInt32 $BLOBTargetEntrySize
             $StartIndex += 4
 
-            # TODO: Priority is not set here, only set TimeStamp
             $BLOBTargetTimeStamp = Get-SubArray -Source $BLOBTargetEntries -StartIndex $StartIndex -Length 8
             $Entry.TargetTimeStamp = [TimeStamp][byte[]] $BLOBTargetTimeStamp
+        
+            # The actual implementation of PriorityRank and PriorityClass seems to be different from doc
+            # Actual: | PriorityClass 3 bits | PriorityRank 5 bits |
+            # Doc:    | PriorityRank 5 bits | PriorityClass 3 bits |
+            $BLOBTargetPriority = Get-SubArray -Source $BLOBTargetEntries -StartIndex $StartIndex -Length 1
+            $Entry.PriorityRank = $BLOBTargetPriority -band 0x1F
+            $Entry.PriorityClass = [Enum]::ToObject([PriorityClass], ($BLOBTargetPriority -band 0xE0) -shr 5)
             $StartIndex += 8
 
             $BLOBTargetState = Get-SubArray -Source $BLOBTargetEntries -StartIndex $StartIndex -Length 4
@@ -403,10 +409,10 @@ class TargetList
     [void] Print()
     {
         $Padding = '        '
-        Write-Host ($Padding + "State`t`t`t`t`t`tType`t`t`tServerName`t`t`tShareName")
+        Write-Host ($Padding + "State    Type    PriorityClass    PriorityRank    ServerName    ShareName")
         foreach ($TargetEntry in $this.TargetEntries)
         {
-            Write-Host ($Padding + $TargetEntry.TargetState + "`t`t`t" + $TargetEntry.TargetType + "`t`t`t" + $TargetEntry.ServerName + "`t`t`t" + $TargetEntry.ShareName)
+            Write-Host ($Padding + $TargetEntry.TargetState + "    " + $TargetEntry.TargetType + "    " + $TargetEntry.PriorityClass + "    " + $TargetEntry.PriorityRank + "    " + $TargetEntry.ServerName + "    " + $TargetEntry.ShareName)
         }
     }
 }
@@ -416,7 +422,7 @@ class TargetEntry
     [uint32] $TargetEntrySize;
     [TimeStamp] $TargetTimeStamp;
     [byte] $PriorityRank;
-    [byte] $PriorityClass;
+    [PriorityClass] $PriorityClass;
     [TargetState] $TargetState;
     [uint32] $TargetType; # Should be 0x2
     [uint16] $ServerNameSize;
@@ -487,4 +493,13 @@ class TimeStamp
     DFS_STORAGE_STATE_OFFLINE = 0x1;
     DFS_STORAGE_STATE_ONLINE = 0x2;
     DFS_STORAGE_STATE_ACTIVE = 0x4;
+}
+
+[Flags()] enum PriorityClass
+{
+    DFS_TARGET_PRIORITY_CLASS_SITE_COST_NORMAL = 0x0;
+    DFS_TARGET_PRIORITY_CLASS_GLOBAL_HIGH = 0x1;
+    DFS_TARGET_PRIORITY_CLASS_SITE_COST_HIGH = 0x2;
+    DFS_TARGET_PRIORITY_CLASS_SITE_COST_LOW = 0x3;
+    DFS_TARGET_PRIORITY_CLASS_GLOBAL_LOW = 0x4;
 }
