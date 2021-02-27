@@ -61,6 +61,8 @@ class PKT
     [uint32] $ElementCount;
     [DFSNamespaceElement[]] $Elements;
 
+    [uint32] $DataLength;
+
     pKT([byte[]] $Data)
     {
         $BLOBVersion = Get-SubArray -Source $Data -StartIndex 0 -Length 4
@@ -71,6 +73,8 @@ class PKT
 
         $BLOBElements = Get-SubArray -Source $Data -StartIndex 8 -Length ($Data.Length - 8)
         $this.CreateElements($BLOBElements)
+
+        $this.DataLength = $Data.Length
     }
 
     [void] CreateElements([byte[]] $BLOBElements)
@@ -106,6 +110,19 @@ class PKT
         {
             Write-Host $Element.Name -ForegroundColor DarkBlue -BackgroundColor White
             $Element.Print($Type)
+        }
+    }
+
+    [void] PrintTree()
+    {
+        Write-Host "PKT"
+        Write-Host "+---Version: $($this.Version) (0,4)"
+        Write-Host "+---ElementCount: $($this.ElementCount) (4,4)"
+        Write-Host "\---Elements (8,$($this.DataLength - 8))"
+        $Offset = 8
+        foreach ($Element in $this.Elements)
+        {
+            $Offset = $Element.PrintTree($Offset)
         }
     }
 }
@@ -148,6 +165,26 @@ class DFSNamespaceElement
             '\siteroot' { $this.DataSite.Print() }
             Default { $this.DataRootOrLink.Print() }
         }
+    }
+
+    [uint32] PrintTree([uint32] $Offset)
+    {
+        $Pad = '    '
+        Write-Host "$Pad+---NameSize: $($this.NameSize) ($Offset,2)"
+        $Offset += 2
+        Write-Host "$Pad+---Name: $($this.Name) ($Offset,$($this.NameSize))"
+        $Offset += $this.NameSize
+        Write-Host "$Pad+---DataSize: $($this.DataSize) ($Offset,4)"
+        $Offset += 4
+        Write-Host "$Pad\---Data ($Offset,$($this.DataSize))"
+        switch ($this.Name)
+        {
+            '\domainroot' { $this.DataRootOrLink.PrintTree($Offset) }
+            '\siteroot' { <# $this.DataSite.PrintTree($Offset) #> }
+            Default { $this.DataRootOrLink.PrintTree($Offset) }
+        }
+        $Offset += $this.DataSize
+        return $Offset
     }
 }
 
@@ -256,14 +293,58 @@ class DFSNamespaceRootOrLink
 
     [void] Print()
     {
-        $Padding = '    '
-        Write-Host ($Padding + "Prefix     : " + $this.Prefix)
-        Write-Host ($Padding + "Type       : " + $this.Type)
-        Write-Host ($Padding + "State      : " + $this.State)
-        Write-Host ($Padding + "Comment    : " + $this.Comment)
-        Write-Host ($Padding + "TTL        : " + $this.ReferralTTL)
-        Write-Host ($Padding + "TargetList : ")
+        $Pad = '    '
+        Write-Host ($Pad + "Prefix     : " + $this.Prefix)
+        Write-Host ($Pad + "Type       : " + $this.Type)
+        Write-Host ($Pad + "State      : " + $this.State)
+        Write-Host ($Pad + "Comment    : " + $this.Comment)
+        Write-Host ($Pad + "TTL        : " + $this.ReferralTTL)
+        Write-Host ($Pad + "TargetList : ")
         $this.TargetList.Print()
+    }
+
+    [uint32] PrintTree([uint32] $Offset)
+    {
+        $Pad = '        '
+        Write-Host "$Pad+---Guid: $($this.RootOrLinkGuid) ($Offset,16)"
+        $Offset += 16
+        Write-Host "$Pad+---PrefixSize: $($this.PrefixSize) ($Offset,2)"
+        $Offset += 2
+        Write-Host "$Pad+---Prefix: $($this.Prefix) ($Offset,$($this.PrefixSize))"
+        $Offset += $this.PrefixSize
+        Write-Host "$Pad+---ShortPrefixSize: $($this.ShortPrefixSize) ($Offset,2)"
+        $Offset += 2
+        Write-Host "$Pad+---ShortPrefix: $($this.ShortPrefix) ($Offset,$($this.ShortPrefixSize))"
+        $Offset += $this.ShortPrefixSize
+        Write-Host "$Pad+---Type: $($this.Type) ($Offset,4)"
+        $Offset += 4
+        Write-Host "$Pad+---State: $($this.State) ($Offset,4)"
+        $Offset += 4
+        Write-Host "$Pad+---CommentSize: $($this.CommentSize) ($Offset,2)"
+        $Offset += 2
+        Write-Host "$Pad+---Comment: $($this.Comment) ($Offset,$($this.CommentSize))"
+        $Offset += $this.CommentSize
+        Write-Host "$Pad+---PrefixTimeStamp: $($this.PrefixTimeStamp) ($Offset,8)"
+        $Offset += 8
+        Write-Host "$Pad+---StateTimeStamp: $($this.StateTimeStamp) ($Offset,8)"
+        $Offset += 8
+        Write-Host "$Pad+---CommentTimeStamp: $($this.CommentTimeStamp) ($Offset,8)"
+        $Offset += 8
+        Write-Host "$Pad+---Version: $($this.Version) ($Offset,4)"
+        $Offset += 4
+        Write-Host "$Pad+---TargetListSize: $($this.TargetListSize) ($Offset,4)"
+        $Offset += 4
+        Write-Host "$Pad+---TargetList ($Offset,$($this.TargetListSize))"
+        $this.TargetList.PrintTree($Offset, $this.TargetListSize)
+        $Offset += $($this.TargetListSize)
+        Write-Host "$Pad+---ReservedBlobSize: $($this.ReservedBlobSize) ($Offset,4)"
+        $Offset += 4
+        Write-Host "$Pad+---ReservedBlob: $($this.ReservedBlob) ($Offset,$($this.ReservedBlobSize))"
+        $Offset += $this.ReservedBlobSize
+        Write-Host "$Pad\---ReferralTTL: $($this.ReferralTTL) ($Offset,4)"
+        $Offset += 4
+
+        return $Offset
     }
 }
 
@@ -408,12 +489,25 @@ class TargetList
 
     [void] Print()
     {
-        $Padding = '        '
-        Write-Host ($Padding + "State    Type    PriorityClass    PriorityRank    ServerName    ShareName")
+        $Pad = '        '
+        Write-Host ($Pad + "State    Type    PriorityClass    PriorityRank    ServerName    ShareName")
         foreach ($TargetEntry in $this.TargetEntries)
         {
-            Write-Host ($Padding + $TargetEntry.TargetState + "    " + $TargetEntry.TargetType + "    " + $TargetEntry.PriorityClass + "    " + $TargetEntry.PriorityRank + "    " + $TargetEntry.ServerName + "    " + $TargetEntry.ShareName)
+            Write-Host ($Pad + $TargetEntry.TargetState + "    " + $TargetEntry.TargetType + "    " + $TargetEntry.PriorityClass + "    " + $TargetEntry.PriorityRank + "    " + $TargetEntry.ServerName + "    " + $TargetEntry.ShareName)
         }
+    }
+
+    [uint32] PrintTree([uint32] $Offset, [uint32] $TargetListSize)
+    {
+        $Pad = '        |   '
+        Write-Host "$Pad+---TargetCount: $($this.TargetCount) ($Offset,4)"
+        $Offset += 4
+        Write-Host "$Pad\---TargetEntries ($Offset, $($TargetListSize - 4))"
+        foreach ($Entry in $this.TargetEntries)
+        {
+            $Offset = $Entry.PrintTree($Offset)
+        }
+        return $Offset
     }
 }
 
@@ -429,6 +523,28 @@ class TargetEntry
     [string] $ServerName;
     [uint16] $ShareNameSize;
     [string] $ShareName;
+
+    [uint32] PrintTree([uint32] $Offset)
+    {
+        $Pad = '        |       '
+        Write-Host "$Pad+---TargetEntrySize: $($this.TargetEntrySize) ($Offset,4)"
+        $Offset += 4
+        Write-Host "$Pad+---TargetTimeStamp: $($this.TargetTimeStamp) ($Offset,8)"
+        $Offset += 8
+        Write-Host "$Pad+---TargetState: $($this.TargetState) ($Offset,4)"
+        $Offset += 4
+        Write-Host "$Pad+---TargetType: $($this.TargetType) ($Offset,4)"
+        $Offset += 4
+        Write-Host "$Pad+---ServerNameSize: $($this.ServerNameSize) ($Offset,2)"
+        $Offset += 2
+        Write-Host "$Pad+---ServerName: $($this.ServerName) ($Offset,$($this.ServerNameSize))"
+        $Offset += $this.ServerNameSize
+        Write-Host "$Pad+---ShareNameSize: $($this.ShareNameSize) ($Offset,2)"
+        $Offset += 2
+        Write-Host "$Pad+---ShareName: $($this.ShareName) ($Offset,$($this.ShareNameSize))"
+        $Offset += $this.ShareNameSize
+        return $Offset
+    }
 }
 
 class SiteEntry
@@ -440,12 +556,12 @@ class SiteEntry
 
     [void] Print()
     {
-        $Padding = '    '
-        Write-Host ($Padding + $this.ServerName)
-        $Padding += '    '
+        $Pad = '    '
+        Write-Host ($Pad + $this.ServerName)
+        $Pad += '    '
         foreach ($Info in $this.SiteNameInfo)
         {
-            Write-Host ($Padding + 'SiteName: ' + $Info.SiteName)
+            Write-Host ($Pad + 'SiteName: ' + $Info.SiteName)
         }
     }
 }
@@ -466,6 +582,11 @@ class TimeStamp
     {
         $this.dwLowDateTime = Convert-LEBytesToUInt32 (Get-SubArray -Source $BLOBTimeStamp -StartIndex 0 -Length 4)
         $this.dwHighDateTime = Convert-LEBytesToUInt32 (Get-SubArray -Source $BLOBTimeStamp -StartIndex 4 -Length 4)
+    }
+
+    [string] ToString()
+    {
+        return "$($this.dwHighDateTime) $($this.dwLowDateTime)"
     }
 }
 

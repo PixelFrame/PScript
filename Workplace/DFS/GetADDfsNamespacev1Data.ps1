@@ -8,13 +8,13 @@ param (
     $Namespace = '*'
 )
 
-if (Test-Path $PSScriptRoot\pKTClass.ps1)
+if (Test-Path $PSScriptRoot\PKT.ps1)
 {
-    . $PSScriptRoot\pKTClass.ps1
+    . $PSScriptRoot\PKT.ps1
 }
 else
 {
-    throw 'Cannot find pKTClass.ps1!'
+    throw 'Cannot find PKT.ps1!'
 }
 
 if ($Namespace -eq '*')
@@ -34,11 +34,11 @@ foreach ($DomainSplit in $DomainSplits)
 Write-Host "Search DN: $DN"
 $ObjNamespaces = Get-ADObject -Filter 'ObjectClass -eq "fTDfs"' -SearchBase $DN -SearchScope Subtree -Properties *
 
-$pKTArr = @()
+$PKTArr = @()
 foreach ($ObjNamespace in $ObjNamespaces)
 {
-    $pKTObj = [pKT]::new($ObjNamespace.pKT)
-    $pKTArr += $pKTObj
+    $PKTObj = [PKT]::new($ObjNamespace.pKT)
+    $PKTArr += $PKTObj
 }
 
-return $pKTArr
+return $PKTArr
