@@ -180,7 +180,7 @@ class DFSNamespaceElement
         switch ($this.Name)
         {
             '\domainroot' { $this.DataRootOrLink.PrintTree($Offset) }
-            '\siteroot' { <# $this.DataSite.PrintTree($Offset) #> }
+            '\siteroot' { $this.DataSite.PrintTree($Offset, $this.DataSize) }
             Default { $this.DataRootOrLink.PrintTree($Offset) }
         }
         $Offset += $this.DataSize
@@ -421,6 +421,21 @@ class SiteInformation
             $SiteEntry.Print()
         }
     }
+
+    [uint32] PrintTree([uint32] $Offset, [uint32] $FullSize)
+    {
+        $Pad = '        '
+        Write-Host "$Pad+---Guid: $($this.SiteTableGuid) ($Offset,16)"
+        $Offset += 16
+        Write-Host "$Pad+---SiteEntryCount: $($this.SiteEntryCount) ($Offset,4)"
+        $Offset += 4
+        Write-Host "$Pad\---SiteEntries ($Offset,$($FullSize - 20))"
+        foreach ($SiteEntry in $this.SiteEntries)
+        {
+            $Offset = $SiteEntry.PrintTree($Offset, $FullSize - 20)
+        }
+        return $Offset
+    }
 }
 
 class TargetList
@@ -541,7 +556,7 @@ class TargetEntry
         $Offset += $this.ServerNameSize
         Write-Host "$Pad+---ShareNameSize: $($this.ShareNameSize) ($Offset,2)"
         $Offset += 2
-        Write-Host "$Pad+---ShareName: $($this.ShareName) ($Offset,$($this.ShareNameSize))"
+        Write-Host "$Pad\---ShareName: $($this.ShareName) ($Offset,$($this.ShareNameSize))"
         $Offset += $this.ShareNameSize
         return $Offset
     }
@@ -564,6 +579,23 @@ class SiteEntry
             Write-Host ($Pad + 'SiteName: ' + $Info.SiteName)
         }
     }
+
+    [uint32] PrintTree([uint32] $Offset, [uint32] $FullSize)
+    {
+        $Pad = '            '
+        Write-Host "$Pad+---ServerNameSize: $($this.ServerNameSize) ($Offset,2))"
+        $Offset += 2
+        Write-Host "$Pad+---ServerName: $($this.ServerName) ($Offset,$($this.ServerNameSize))"
+        $Offset += $this.ServerNameSize
+        Write-Host "$Pad+---SiteNameInfoCount: $($this.SiteNameInfoCount) ($Offset,2)"
+        $Offset += 2
+        Write-Host "$Pad\---SiteNameInfo ($Offset,$($FullSize - 4 - $this.ServerNameSize))"
+        foreach ($Info in $this.SiteNameInfo)
+        {
+            $Offset = $Info.PrintTree($Offset)
+        }
+        return $Offset
+    }
 }
 
 class SiteNameInfo
@@ -571,6 +603,18 @@ class SiteNameInfo
     [uint32] $Flags; # Must be 0
     [uint16] $SiteNameSize;
     [string] $SiteName;
+
+    [uint32] PrintTree([uint32] $Offset)
+    {
+        $Pad = '                '
+        Write-Host "$Pad+---Flags: $($this.Flags) ($Offset,4))"
+        $Offset += 4
+        Write-Host "$Pad+---SiteNameSize: $($this.SiteNameSize) ($Offset,2))"
+        $Offset += 2
+        Write-Host "$Pad+---SiteName: $($this.SiteName) ($Offset,$($this.SiteNameSize))"
+        $Offset += $this.SiteNameSize
+        return $Offset
+    }
 }
 
 class TimeStamp
