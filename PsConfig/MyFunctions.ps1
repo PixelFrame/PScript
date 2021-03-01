@@ -3,11 +3,17 @@ function ConvertTo-Utf8
     param (
         [Parameter(ValueFromPipeline)][string] $File,
         [string] $Encoding = 'gb2312',
+        [switch] $PSEscape,
         [switch] $NewFile
     )
 
     PROCESS
     {
+        if ($PSEscape)
+        {
+            $File = $File.Replace('`[', '[')
+            $File = $File.Replace('`]', ']')
+        }
         $Contents = [System.IO.File]::ReadAllText($File, [System.Text.Encoding]::GetEncoding($Encoding))
         $EncUtf8NoBom = New-Object System.Text.UTF8Encoding -ArgumentList $false
         if ($NewFile)
@@ -213,4 +219,9 @@ function ConfigPS
     )
 
     & "$Env:USERPROFILE\Documents\PowerShell\Scripts\ConfigPS.ps1" -Mode $Mode
+}
+
+function Update-ChocoApps
+{
+    Start-Process -FilePath $env:windir\System32\cmd.exe -ArgumentList '/K "choco upgrade all -y"'
 }
