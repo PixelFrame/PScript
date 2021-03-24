@@ -63,7 +63,7 @@ class PKT
 
     [byte[]] $RawData;
 
-    pKT([byte[]] $Data)
+    PKT([byte[]] $Data)
     {
         $this.RawData = $Data
         $BLOBVersion = Get-SubArray -Source $Data -StartIndex 0 -Length 4
@@ -74,8 +74,6 @@ class PKT
 
         $BLOBElements = Get-SubArray -Source $Data -StartIndex 8 -Length ($Data.Length - 8)
         $this.CreateElements($BLOBElements)
-
-        $this.RawData.Length = $Data.Length
     }
 
     [void] CreateElements([byte[]] $BLOBElements)
@@ -461,9 +459,19 @@ class SiteInformation
         $TreeString += "$Pad+---SiteEntryCount: $($this.SiteEntryCount) ($Offset,4)"
         $Offset += 4
         $TreeString += "$Pad\---SiteEntries ($Offset,$($FullSize - 20))"
-        foreach ($SiteEntry in $this.SiteEntries)
+        for ($i = 0; $i -lt $this.SiteEntries.Count; $i++)
         {
-            $Offset = $SiteEntry.PrintTree($Offset, $FullSize - 20, $Pad + '    ', [ref] $TreeString)
+            if ($i -eq $this.SiteEntries.Count - 1)
+            {
+                $TreeString += "$Pad    \---Site Entry"
+                $Pad2 = '        ' 
+            }
+            else
+            {
+                $TreeString += "$Pad    +---Site Entry"
+                $Pad2 = '    |   ' 
+            }
+            $Offset = $this.SiteEntries[$i].PrintTree($Offset, $FullSize - 20, $Pad + $Pad2, [ref] $TreeString)
         }
         $RefTreeString.Value = $TreeString
         return $Offset
@@ -552,9 +560,19 @@ class TargetList
         $TreeString += "$Pad+---TargetCount: $($this.TargetCount) ($Offset,4)"
         $Offset += 4
         $TreeString += "$Pad\---TargetEntries ($Offset, $($TargetListSize - 4))"
-        foreach ($Entry in $this.TargetEntries)
+        for ($i = 0; $i -lt $this.TargetEntries.Count; $i++)
         {
-            $Offset = $Entry.PrintTree($Offset, $Pad + '    ', [ref] $TreeString)
+            if ($i -eq $this.TargetEntries.Count - 1)
+            { 
+                $TreeString += "$Pad    \---Target Entry"
+                $Pad2 = '        ' 
+            } 
+            else 
+            { 
+                $TreeString += "$Pad    +---Target Entry"
+                $Pad2 = '    |   ' 
+            }
+            $Offset = $this.TargetEntries[$i].PrintTree($Offset, $Pad + $Pad2, [ref] $TreeString)
         }
         $RefTreeString.Value = $TreeString
         return $Offset
