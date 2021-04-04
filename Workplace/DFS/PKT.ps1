@@ -61,10 +61,11 @@ class PKT
     [uint32] $ElementCount;
     [DFSNamespaceElement[]] $Elements;
 
-    [uint32] $DataLength;
+    [byte[]] $RawData;
 
-    pKT([byte[]] $Data)
+    PKT([byte[]] $Data)
     {
+        $this.RawData = $Data
         $BLOBVersion = Get-SubArray -Source $Data -StartIndex 0 -Length 4
         $BLOBElementCount = Get-SubArray -Source $Data -StartIndex 4 -Length 4
 
@@ -73,8 +74,6 @@ class PKT
 
         $BLOBElements = Get-SubArray -Source $Data -StartIndex 8 -Length ($Data.Length - 8)
         $this.CreateElements($BLOBElements)
-
-        $this.DataLength = $Data.Length
     }
 
     [void] CreateElements([byte[]] $BLOBElements)
@@ -100,30 +99,53 @@ class PKT
         }
     }
 
-    [void] Print()
+    [string[]] Print()
     {
-        $this.Print('All')
+        return $this.Print('All')
     }
-    [void] Print([string] $Type)
+    [string[]] Print([string] $Type)
     {
+        [string[]] $PrintString = @()
         foreach ($Element in $this.Elements)
         {
-            Write-Host $Element.Name -ForegroundColor DarkBlue -BackgroundColor White
-            $Element.Print($Type)
+            $PrintString += $Element.Name
+            $Element.Print($Type, [ref] $PrintString)
         }
+        return $PrintString
     }
 
-    [void] PrintTree()
+    [string[]] PrintTree()
     {
-        Write-Host "PKT"
-        Write-Host "+---Version: $($this.Version) (0,4)"
-        Write-Host "+---ElementCount: $($this.ElementCount) (4,4)"
-        Write-Host "\---Elements (8,$($this.DataLength - 8))"
+        [string[]] $TreeString = @()
+        $TreeString += "PKT"
+        $TreeString += "+---Version: $($this.Version) (0,4)"
+        $TreeString += "+---ElementCount: $($this.ElementCount) (4,4)"
+        $TreeString += "\---Elements (8,$($this.RawData.Length - 8))"
         $Offset = 8
-        foreach ($Element in $this.Elements)
+        for ($i = 0; $i -lt $this.ElementCount; $i++)
         {
-            $Offset = $Element.PrintTree($Offset)
+            if ($i -eq ($this.ElementCount - 1))
+            {
+                $TreeString += '    \---Element'
+                $Offset = $this.Elements[$i].PrintTree($Offset, '        ', [ref] $TreeString)
+            }
+            else
+            {
+                $TreeString += '    +---Element'
+                $Offset = $this.Elements[$i].PrintTree($Offset, '    |   ', [ref] $TreeString)
+            }
         }
+        return $TreeString
+    }
+
+    [string] PrintRaw()
+    {
+        return [System.BitConverter]::ToString($this.RawData)
+    }
+
+    [void] WriteRaw([string] $Path)
+    {
+        $this.RawData | Out-File $Path
     }
 }
 
@@ -145,8 +167,9 @@ class DFSNamespaceElement
         }
     }
 
-    [void] Print([string] $Type)
+    [void] Print([string] $Type, [ref] $RefPrintString)
     {
+        $PrintString = $RefPrintString.Value
         if ($Type -eq 'Root' -and $this.Name -ne '\domainroot')
         {
             return
@@ -161,29 +184,31 @@ class DFSNamespaceElement
         }
         switch ($this.Name)
         {
-            '\domainroot' { $this.DataRootOrLink.Print() }
-            '\siteroot' { $this.DataSite.Print() }
-            Default { $this.DataRootOrLink.Print() }
+            '\domainroot' { $this.DataRootOrLink.Print([ref] $PrintString) }
+            '\siteroot' { $this.DataSite.Print([ref] $PrintString) }
+            Default { $this.DataRootOrLink.Print([ref] $PrintString) }
         }
+        $RefPrintString.Value = $PrintString
     }
 
-    [uint32] PrintTree([uint32] $Offset)
+    [uint32] PrintTree([uint32] $Offset, [string] $Pad, [ref] $RefTreeString)
     {
-        $Pad = '    '
-        Write-Host "$Pad+---NameSize: $($this.NameSize) ($Offset,2)"
+        $TreeString = $RefTreeString.Value
+        $TreeString += "$Pad+---NameSize: $($this.NameSize) ($Offset,2)"
         $Offset += 2
-        Write-Host "$Pad+---Name: $($this.Name) ($Offset,$($this.NameSize))"
+        $TreeString += "$Pad+---Name: $($this.Name) ($Offset,$($this.NameSize))"
         $Offset += $this.NameSize
-        Write-Host "$Pad+---DataSize: $($this.DataSize) ($Offset,4)"
+        $TreeString += "$Pad+---DataSize: $($this.DataSize) ($Offset,4)"
         $Offset += 4
-        Write-Host "$Pad\---Data ($Offset,$($this.DataSize))"
+        $TreeString += "$Pad\---Data ($Offset,$($this.DataSize))"
         switch ($this.Name)
         {
-            '\domainroot' { $this.DataRootOrLink.PrintTree($Offset) }
-            '\siteroot' { $this.DataSite.PrintTree($Offset, $this.DataSize) }
-            Default { $this.DataRootOrLink.PrintTree($Offset) }
+            '\domainroot' { $this.DataRootOrLink.PrintTree($Offset, $Pad + '    ', [ref] $TreeString) }
+            '\siteroot' { $this.DataSite.PrintTree($Offset, $this.DataSize, $Pad + '    ', [ref] $TreeString) }
+            Default { $this.DataRootOrLink.PrintTree($Offset, $Pad + '    ', [ref] $TreeString) }
         }
         $Offset += $this.DataSize
+        $RefTreeString.Value = $TreeString
         return $Offset
     }
 }
@@ -291,59 +316,61 @@ class DFSNamespaceRootOrLink
         }
     }
 
-    [void] Print()
+    [void] Print([ref] $RefPrintString)
     {
+        $PrintString = $RefPrintString.Value
         $Pad = '    '
-        Write-Host ($Pad + "Prefix     : " + $this.Prefix)
-        Write-Host ($Pad + "Type       : " + $this.Type)
-        Write-Host ($Pad + "State      : " + $this.State)
-        Write-Host ($Pad + "Comment    : " + $this.Comment)
-        Write-Host ($Pad + "TTL        : " + $this.ReferralTTL)
-        Write-Host ($Pad + "TargetList : ")
-        $this.TargetList.Print()
+        $PrintString += ($Pad + "Prefix     : " + $this.Prefix)
+        $PrintString += ($Pad + "Type       : " + $this.Type)
+        $PrintString += ($Pad + "State      : " + $this.State)
+        $PrintString += ($Pad + "Comment    : " + $this.Comment)
+        $PrintString += ($Pad + "TTL        : " + $this.ReferralTTL)
+        $PrintString += ($Pad + "TargetList : ")
+        $this.TargetList.Print([ref] $PrintString)
+        $RefPrintString.Value = $PrintString
     }
 
-    [uint32] PrintTree([uint32] $Offset)
+    [uint32] PrintTree([uint32] $Offset, [string] $Pad, [ref] $RefTreeString)
     {
-        $Pad = '        '
-        Write-Host "$Pad+---Guid: $($this.RootOrLinkGuid) ($Offset,16)"
+        $TreeString = $RefTreeString.Value
+        $TreeString += "$Pad+---Guid: $($this.RootOrLinkGuid) ($Offset,16)"
         $Offset += 16
-        Write-Host "$Pad+---PrefixSize: $($this.PrefixSize) ($Offset,2)"
+        $TreeString += "$Pad+---PrefixSize: $($this.PrefixSize) ($Offset,2)"
         $Offset += 2
-        Write-Host "$Pad+---Prefix: $($this.Prefix) ($Offset,$($this.PrefixSize))"
+        $TreeString += "$Pad+---Prefix: $($this.Prefix) ($Offset,$($this.PrefixSize))"
         $Offset += $this.PrefixSize
-        Write-Host "$Pad+---ShortPrefixSize: $($this.ShortPrefixSize) ($Offset,2)"
+        $TreeString += "$Pad+---ShortPrefixSize: $($this.ShortPrefixSize) ($Offset,2)"
         $Offset += 2
-        Write-Host "$Pad+---ShortPrefix: $($this.ShortPrefix) ($Offset,$($this.ShortPrefixSize))"
+        $TreeString += "$Pad+---ShortPrefix: $($this.ShortPrefix) ($Offset,$($this.ShortPrefixSize))"
         $Offset += $this.ShortPrefixSize
-        Write-Host "$Pad+---Type: $($this.Type) ($Offset,4)"
+        $TreeString += "$Pad+---Type: $($this.Type) ($Offset,4)"
         $Offset += 4
-        Write-Host "$Pad+---State: $($this.State) ($Offset,4)"
+        $TreeString += "$Pad+---State: $($this.State) ($Offset,4)"
         $Offset += 4
-        Write-Host "$Pad+---CommentSize: $($this.CommentSize) ($Offset,2)"
+        $TreeString += "$Pad+---CommentSize: $($this.CommentSize) ($Offset,2)"
         $Offset += 2
-        Write-Host "$Pad+---Comment: $($this.Comment) ($Offset,$($this.CommentSize))"
+        $TreeString += "$Pad+---Comment: $($this.Comment) ($Offset,$($this.CommentSize))"
         $Offset += $this.CommentSize
-        Write-Host "$Pad+---PrefixTimeStamp: $($this.PrefixTimeStamp) ($Offset,8)"
+        $TreeString += "$Pad+---PrefixTimeStamp: $($this.PrefixTimeStamp) ($Offset,8)"
         $Offset += 8
-        Write-Host "$Pad+---StateTimeStamp: $($this.StateTimeStamp) ($Offset,8)"
+        $TreeString += "$Pad+---StateTimeStamp: $($this.StateTimeStamp) ($Offset,8)"
         $Offset += 8
-        Write-Host "$Pad+---CommentTimeStamp: $($this.CommentTimeStamp) ($Offset,8)"
+        $TreeString += "$Pad+---CommentTimeStamp: $($this.CommentTimeStamp) ($Offset,8)"
         $Offset += 8
-        Write-Host "$Pad+---Version: $($this.Version) ($Offset,4)"
+        $TreeString += "$Pad+---Version: $($this.Version) ($Offset,4)"
         $Offset += 4
-        Write-Host "$Pad+---TargetListSize: $($this.TargetListSize) ($Offset,4)"
+        $TreeString += "$Pad+---TargetListSize: $($this.TargetListSize) ($Offset,4)"
         $Offset += 4
-        Write-Host "$Pad+---TargetList ($Offset,$($this.TargetListSize))"
-        $this.TargetList.PrintTree($Offset, $this.TargetListSize)
+        $TreeString += "$Pad+---TargetList ($Offset,$($this.TargetListSize))"
+        $this.TargetList.PrintTree($Offset, $this.TargetListSize, $Pad + '|   ', [ref] $TreeString)
         $Offset += $($this.TargetListSize)
-        Write-Host "$Pad+---ReservedBlobSize: $($this.ReservedBlobSize) ($Offset,4)"
+        $TreeString += "$Pad+---ReservedBlobSize: $($this.ReservedBlobSize) ($Offset,4)"
         $Offset += 4
-        Write-Host "$Pad+---ReservedBlob: $($this.ReservedBlob) ($Offset,$($this.ReservedBlobSize))"
+        $TreeString += "$Pad+---ReservedBlob: $($this.ReservedBlob) ($Offset,$($this.ReservedBlobSize))"
         $Offset += $this.ReservedBlobSize
-        Write-Host "$Pad\---ReferralTTL: $($this.ReferralTTL) ($Offset,4)"
+        $TreeString += "$Pad\---ReferralTTL: $($this.ReferralTTL) ($Offset,4)"
         $Offset += 4
-
+        $RefTreeString.Value = $TreeString
         return $Offset
     }
 }
@@ -414,26 +441,39 @@ class SiteInformation
         }
     }
 
-    [void] Print()
+    [void] Print([ref] $RefPrintString)
     {
+        $PrintString = $RefPrintString.Value
         foreach ($SiteEntry in $this.SiteEntries)
         {
-            $SiteEntry.Print()
+            $SiteEntry.Print([ref] $PrintString)
         }
+        $RefPrintString.Value = $PrintString 
     }
 
-    [uint32] PrintTree([uint32] $Offset, [uint32] $FullSize)
+    [uint32] PrintTree([uint32] $Offset, [uint32] $FullSize, [string] $Pad, [ref] $RefTreeString)
     {
-        $Pad = '        '
-        Write-Host "$Pad+---Guid: $($this.SiteTableGuid) ($Offset,16)"
+        $TreeString = $RefTreeString.Value
+        $TreeString += "$Pad+---Guid: $($this.SiteTableGuid) ($Offset,16)"
         $Offset += 16
-        Write-Host "$Pad+---SiteEntryCount: $($this.SiteEntryCount) ($Offset,4)"
+        $TreeString += "$Pad+---SiteEntryCount: $($this.SiteEntryCount) ($Offset,4)"
         $Offset += 4
-        Write-Host "$Pad\---SiteEntries ($Offset,$($FullSize - 20))"
-        foreach ($SiteEntry in $this.SiteEntries)
+        $TreeString += "$Pad\---SiteEntries ($Offset,$($FullSize - 20))"
+        for ($i = 0; $i -lt $this.SiteEntries.Count; $i++)
         {
-            $Offset = $SiteEntry.PrintTree($Offset, $FullSize - 20)
+            if ($i -eq $this.SiteEntries.Count - 1)
+            {
+                $TreeString += "$Pad    \---Site Entry"
+                $Pad2 = '        ' 
+            }
+            else
+            {
+                $TreeString += "$Pad    +---Site Entry"
+                $Pad2 = '    |   ' 
+            }
+            $Offset = $this.SiteEntries[$i].PrintTree($Offset, $FullSize - 20, $Pad + $Pad2, [ref] $TreeString)
         }
+        $RefTreeString.Value = $TreeString
         return $Offset
     }
 }
@@ -502,26 +542,39 @@ class TargetList
         }
     }
 
-    [void] Print()
+    [void] Print([ref] $RefPrintString)
     {
+        $PrintString = $RefPrintString.Value
         $Pad = '        '
-        Write-Host ($Pad + "State    Type    PriorityClass    PriorityRank    ServerName    ShareName")
+        $PrintString += ($Pad + "State    Type    PriorityClass    PriorityRank    ServerName    ShareName")
         foreach ($TargetEntry in $this.TargetEntries)
         {
-            Write-Host ($Pad + $TargetEntry.TargetState + "    " + $TargetEntry.TargetType + "    " + $TargetEntry.PriorityClass + "    " + $TargetEntry.PriorityRank + "    " + $TargetEntry.ServerName + "    " + $TargetEntry.ShareName)
+            $PrintString += ($Pad + $TargetEntry.TargetState + "    " + $TargetEntry.TargetType + "    " + $TargetEntry.PriorityClass + "    " + $TargetEntry.PriorityRank + "    " + $TargetEntry.ServerName + "    " + $TargetEntry.ShareName)
         }
+        $RefPrintString.Value = $PrintString
     }
 
-    [uint32] PrintTree([uint32] $Offset, [uint32] $TargetListSize)
+    [uint32] PrintTree([uint32] $Offset, [uint32] $TargetListSize, [string] $Pad, [ref] $RefTreeString)
     {
-        $Pad = '        |   '
-        Write-Host "$Pad+---TargetCount: $($this.TargetCount) ($Offset,4)"
+        $TreeString = $RefTreeString.Value
+        $TreeString += "$Pad+---TargetCount: $($this.TargetCount) ($Offset,4)"
         $Offset += 4
-        Write-Host "$Pad\---TargetEntries ($Offset, $($TargetListSize - 4))"
-        foreach ($Entry in $this.TargetEntries)
+        $TreeString += "$Pad\---TargetEntries ($Offset, $($TargetListSize - 4))"
+        for ($i = 0; $i -lt $this.TargetEntries.Count; $i++)
         {
-            $Offset = $Entry.PrintTree($Offset)
+            if ($i -eq $this.TargetEntries.Count - 1)
+            { 
+                $TreeString += "$Pad    \---Target Entry"
+                $Pad2 = '        ' 
+            } 
+            else 
+            { 
+                $TreeString += "$Pad    +---Target Entry"
+                $Pad2 = '    |   ' 
+            }
+            $Offset = $this.TargetEntries[$i].PrintTree($Offset, $Pad + $Pad2, [ref] $TreeString)
         }
+        $RefTreeString.Value = $TreeString
         return $Offset
     }
 }
@@ -539,25 +592,26 @@ class TargetEntry
     [uint16] $ShareNameSize;
     [string] $ShareName;
 
-    [uint32] PrintTree([uint32] $Offset)
+    [uint32] PrintTree([uint32] $Offset, [string] $Pad, [ref] $RefTreeString)
     {
-        $Pad = '        |       '
-        Write-Host "$Pad+---TargetEntrySize: $($this.TargetEntrySize) ($Offset,4)"
+        $TreeString = $RefTreeString.Value
+        $TreeString += "$Pad+---TargetEntrySize: $($this.TargetEntrySize) ($Offset,4)"
         $Offset += 4
-        Write-Host "$Pad+---TargetTimeStamp: $($this.TargetTimeStamp) ($Offset,8)"
+        $TreeString += "$Pad+---TargetTimeStamp: $($this.TargetTimeStamp) ($Offset,8)"
         $Offset += 8
-        Write-Host "$Pad+---TargetState: $($this.TargetState) ($Offset,4)"
+        $TreeString += "$Pad+---TargetState: $($this.TargetState) ($Offset,4)"
         $Offset += 4
-        Write-Host "$Pad+---TargetType: $($this.TargetType) ($Offset,4)"
+        $TreeString += "$Pad+---TargetType: $($this.TargetType) ($Offset,4)"
         $Offset += 4
-        Write-Host "$Pad+---ServerNameSize: $($this.ServerNameSize) ($Offset,2)"
+        $TreeString += "$Pad+---ServerNameSize: $($this.ServerNameSize) ($Offset,2)"
         $Offset += 2
-        Write-Host "$Pad+---ServerName: $($this.ServerName) ($Offset,$($this.ServerNameSize))"
+        $TreeString += "$Pad+---ServerName: $($this.ServerName) ($Offset,$($this.ServerNameSize))"
         $Offset += $this.ServerNameSize
-        Write-Host "$Pad+---ShareNameSize: $($this.ShareNameSize) ($Offset,2)"
+        $TreeString += "$Pad+---ShareNameSize: $($this.ShareNameSize) ($Offset,2)"
         $Offset += 2
-        Write-Host "$Pad\---ShareName: $($this.ShareName) ($Offset,$($this.ShareNameSize))"
+        $TreeString += "$Pad\---ShareName: $($this.ShareName) ($Offset,$($this.ShareNameSize))"
         $Offset += $this.ShareNameSize
+        $RefTreeString.Value = $TreeString
         return $Offset
     }
 }
@@ -569,31 +623,34 @@ class SiteEntry
     [uint32] $SiteNameInfoCount;
     [SiteNameInfo[]] $SiteNameInfo;
 
-    [void] Print()
+    [void] Print([ref] $RefPrintString)
     {
+        $PrintString = $RefPrintString.Value
         $Pad = '    '
-        Write-Host ($Pad + $this.ServerName)
+        $PrintString += ($Pad + $this.ServerName)
         $Pad += '    '
         foreach ($Info in $this.SiteNameInfo)
         {
-            Write-Host ($Pad + 'SiteName: ' + $Info.SiteName)
+            $PrintString += ($Pad + 'SiteName: ' + $Info.SiteName)
         }
+        $RefPrintString.Value = $PrintString 
     }
 
-    [uint32] PrintTree([uint32] $Offset, [uint32] $FullSize)
+    [uint32] PrintTree([uint32] $Offset, [uint32] $FullSize, [string] $Pad, [ref] $RefTreeString)
     {
-        $Pad = '            '
-        Write-Host "$Pad+---ServerNameSize: $($this.ServerNameSize) ($Offset,2))"
+        $TreeString = $RefTreeString.Value
+        $TreeString += "$Pad+---ServerNameSize: $($this.ServerNameSize) ($Offset,2))"
         $Offset += 2
-        Write-Host "$Pad+---ServerName: $($this.ServerName) ($Offset,$($this.ServerNameSize))"
+        $TreeString += "$Pad+---ServerName: $($this.ServerName) ($Offset,$($this.ServerNameSize))"
         $Offset += $this.ServerNameSize
-        Write-Host "$Pad+---SiteNameInfoCount: $($this.SiteNameInfoCount) ($Offset,2)"
+        $TreeString += "$Pad+---SiteNameInfoCount: $($this.SiteNameInfoCount) ($Offset,2)"
         $Offset += 2
-        Write-Host "$Pad\---SiteNameInfo ($Offset,$($FullSize - 4 - $this.ServerNameSize))"
+        $TreeString += "$Pad\---SiteNameInfo ($Offset,$($FullSize - 4 - $this.ServerNameSize))"
         foreach ($Info in $this.SiteNameInfo)
         {
-            $Offset = $Info.PrintTree($Offset)
+            $Offset = $Info.PrintTree($Offset, $Pad + '    ', [ref] $TreeString)
         }
+        $RefTreeString.Value = $TreeString
         return $Offset
     }
 }
@@ -604,15 +661,16 @@ class SiteNameInfo
     [uint16] $SiteNameSize;
     [string] $SiteName;
 
-    [uint32] PrintTree([uint32] $Offset)
+    [uint32] PrintTree([uint32] $Offset, [string] $Pad, [ref] $RefTreeString)
     {
-        $Pad = '                '
-        Write-Host "$Pad+---Flags: $($this.Flags) ($Offset,4))"
+        $TreeString = $RefTreeString.Value
+        $TreeString += "$Pad+---Flags: $($this.Flags) ($Offset,4))"
         $Offset += 4
-        Write-Host "$Pad+---SiteNameSize: $($this.SiteNameSize) ($Offset,2))"
+        $TreeString += "$Pad+---SiteNameSize: $($this.SiteNameSize) ($Offset,2))"
         $Offset += 2
-        Write-Host "$Pad+---SiteName: $($this.SiteName) ($Offset,$($this.SiteNameSize))"
+        $TreeString += "$Pad+---SiteName: $($this.SiteName) ($Offset,$($this.SiteNameSize))"
         $Offset += $this.SiteNameSize
+        $RefTreeString.Value = $TreeString
         return $Offset
     }
 }
