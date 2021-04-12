@@ -2,14 +2,17 @@
 param (
     [Parameter(Mandatory = $true)]
     [string]
-    $PSType
+    $PSType,
+    
+    [switch]
+    $PoshV3
 )
 
 
 $ProfilePath = $env:USERPROFILE + '\Documents\' + $PSType
 Write-Host '[Info] Adding PoshTheme ParadoxCascadia'
 
-$PoshThemeContent = 
+$PoshV2ThemeContent = 
 @'
 #requires -Version 2 -Modules posh-git
 function Write-Theme
@@ -105,10 +108,126 @@ $sl.Colors.WithBackgroundColor = [ConsoleColor]::Magenta
 $sl.Colors.VirtualEnvBackgroundColor = [System.ConsoleColor]::Red
 $sl.Colors.VirtualEnvForegroundColor = [System.ConsoleColor]::White
 '@
-$PoshThemePath = $ProfilePath + '\PoshThemes\'
-if (!(Test-Path $PoshThemePath))
+
+$PoshV3ThemeContent =
+@'
 {
-    New-Item -Path $PoshThemePath -ItemType Directory | Out-Null
+  "$schema": "https://raw.githubusercontent.com/JanDeDobbeleer/oh-my-posh/main/themes/schema.json",
+  "blocks": [
+    {
+      "alignment": "left",
+      "segments": [
+        {
+          "background": "#0050ac",
+          "foreground": "#b6dcff",
+          "powerline_symbol": "",
+          "style": "powerline",
+          "type": "root",
+          "properties": {
+            "root_icon": "#"
+          }
+        },
+        {
+          "background": "#358dff",
+          "foreground": "#100e23",
+          "powerline_symbol": "",
+          "style": "powerline",
+          "type": "session"
+        },
+        {
+          "background": "#91ddff",
+          "foreground": "#100e23",
+          "powerline_symbol": "",
+          "properties": {
+            "folder_icon": "",
+            "folder_separator_icon": "\\",
+            "style": "full"
+          },
+          "style": "powerline",
+          "type": "path"
+        },
+        {
+          "background": "#b6dcff",
+          "foreground": "#100e23",
+          "powerline_symbol": "",
+          "style": "powerline",
+          "type": "git",
+          "properties": {
+            "local_working_icon": " …",
+            "local_staged_icon": " ·"
+          }
+        },
+        {
+          "background": "#00245a",
+          "foreground": "#ffffff",
+          "powerline_symbol": "",
+          "properties": {
+            "prefix": " Err: ",
+            "display_exit_code": true,
+            "always_numeric": true
+          },
+          "style": "powerline",
+          "type": "exit"
+        }
+      ],
+      "type": "prompt"
+    },
+    {
+      "alignment": "right",
+      "segments": [
+        {
+          "style": "plain",
+          "foreground": "#b6dcff",
+          "type": "time",
+          "properties": {
+            "time_format": "[15:04:05]"
+          }
+        }
+      ],
+      "type": "prompt"
+    },
+    {
+      "type": "newline"
+    },
+    {
+      "alignment": "left",
+      "segments": [
+        {
+          "foreground": "#007ACC",
+          "properties": {
+            "prefix": "",
+            "text": "❯"
+          },
+          "style": "plain",
+          "type": "text"
+        }
+      ],
+      "type": "prompt"
+    }
+  ],
+  "final_space": false
 }
-$PoshThemePath += 'ParadoxCascadia.psm1'
-Out-File -FilePath $PoshThemePath -Encoding utf8 -InputObject $PoshThemeContent
+'@
+
+$PoshV2ThemePath = $ProfilePath + '\PoshThemes\'
+if (!(Test-Path $PoshV2ThemePath))
+{
+    New-Item -Path $PoshV2ThemePath -ItemType Directory | Out-Null
+}
+$PoshV2ThemePath += 'ParadoxCascadia.psm1'
+
+$PoshV3ThemePath = $env:USERPROFILE + '\.poshthemes\'
+if (!(Test-Path $PoshV3ThemePath))
+{
+    New-Item -Path $PoshV3ThemePath -ItemType Directory | Out-Null
+}
+$PoshV3ThemePath += 'ParadoxCascadiaV3.json'
+
+if ($PoshV3)
+{
+    Out-File -FilePath $PoshV3ThemePath -Encoding utf8 -InputObject $PoshV3ThemeContent
+}
+else
+{
+    Out-File -FilePath $PoshV2ThemePath -Encoding utf8 -InputObject $PoshV2ThemeContent
+}

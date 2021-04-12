@@ -3,14 +3,17 @@ param (
     [Parameter()]
     [ValidateSet('Full', 'Profile', 'TerminalStyle', 'ModuleInstall', 'AppInstall', 'StubOnly')]
     [string]
-    $Mode = 'Full'
+    $Mode = 'Full',
+
+    [switch]
+    $PoshV3
 )
 
 @'
 ###################################################
 ###                                             ###
 ###       PowerShell Configuration Script       ###
-###                                      v1.4d  ###
+###                                      v2.0A  ###
 ###                                             ###
 ###################################################
 '@
@@ -42,9 +45,9 @@ if (([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]:
         'Full'
         {
             Write-Host '[Info] Full Mode: All configuration will be installed/refreshed'
-            & $PSScriptRoot\AutoConfig\InstallPoshModules.ps1
-            & $PSScriptRoot\AutoConfig\WriteProfile.ps1 -PSType $PSType
-            & $PSScriptRoot\AutoConfig\WritePoshTheme.ps1 -PSType $PSType
+            & $PSScriptRoot\AutoConfig\InstallPoshModules.ps1 -PoshV3:$PoshV3
+            & $PSScriptRoot\AutoConfig\WriteProfile.ps1 -PSType $PSType -PoshV3:$PoshV3
+            & $PSScriptRoot\AutoConfig\WritePoshTheme.ps1 -PSType $PSType -PoshV3:$PoshV3
             & $PSScriptRoot\AutoConfig\SetColor.ps1
             & $PSScriptRoot\AutoConfig\InstallApps.ps1
             & $PSScriptRoot\AutoConfig\UpdateRegistry.ps1
@@ -55,8 +58,8 @@ if (([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]:
         'Profile'
         {
             Write-Host '[Info] Profile Mode: Will refresh PowerShell user profile and PoshTheme'
-            & $PSScriptRoot\AutoConfig\WriteProfile.ps1 -PSType $PSType
-            & $PSScriptRoot\AutoConfig\WritePoshTheme.ps1 -PSType $PSType
+            & $PSScriptRoot\AutoConfig\WriteProfile.ps1 -PSType $PSType -PoshV3:$PoshV3
+            & $PSScriptRoot\AutoConfig\WritePoshTheme.ps1 -PSType $PSType -PoshV3:$PoshV3
             break
         }
         'TerminalStyle'
@@ -70,9 +73,9 @@ if (([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]:
         'ModuleInstall'
         {
             Write-Host '[Info] Module Installation Mode: Will install/update posh modules and refresh PowerShell user profile and PoshTheme'
-            & $PSScriptRoot\AutoConfig\InstallPoshModules.ps1
-            & $PSScriptRoot\AutoConfig\WriteProfile.ps1 -PSType $PSType
-            & $PSScriptRoot\AutoConfig\WritePoshTheme.ps1 -PSType $PSType
+            & $PSScriptRoot\AutoConfig\InstallPoshModules.ps1 -PoshV3:$PoshV3
+            & $PSScriptRoot\AutoConfig\WriteProfile.ps1 -PSType $PSType -PoshV3:$PoshV3
+            & $PSScriptRoot\AutoConfig\WritePoshTheme.ps1 -PSType $PSType -PoshV3:$PoshV3
             break
         }
         'AppInstall'
