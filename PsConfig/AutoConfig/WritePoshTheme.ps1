@@ -120,7 +120,7 @@ $PoshV3ThemeContent =
         {
           "background": "#0050ac",
           "foreground": "#b6dcff",
-          "powerline_symbol": "",
+          "powerline_symbol": "\ue0b0",
           "style": "powerline",
           "type": "root",
           "properties": {
@@ -130,16 +130,16 @@ $PoshV3ThemeContent =
         {
           "background": "#358dff",
           "foreground": "#100e23",
-          "powerline_symbol": "",
+          "powerline_symbol": "\ue0b0",
           "style": "powerline",
           "type": "session"
         },
         {
           "background": "#91ddff",
           "foreground": "#100e23",
-          "powerline_symbol": "",
+          "powerline_symbol": "\ue0b0",
           "properties": {
-            "folder_icon": "",
+            "folder_icon": "\uf115",
             "folder_separator_icon": "\\",
             "style": "full"
           },
@@ -149,18 +149,18 @@ $PoshV3ThemeContent =
         {
           "background": "#b6dcff",
           "foreground": "#100e23",
-          "powerline_symbol": "",
+          "powerline_symbol": "\ue0b0",
           "style": "powerline",
           "type": "git",
           "properties": {
-            "local_working_icon": " …",
-            "local_staged_icon": " ·"
+            "local_working_icon": " \u2026",
+            "local_staged_icon": " \u00b7"
           }
         },
         {
           "background": "#00245a",
           "foreground": "#ffffff",
-          "powerline_symbol": "",
+          "powerline_symbol": "\ue0b0",
           "properties": {
             "prefix": " Err: ",
             "display_exit_code": true,
@@ -196,7 +196,7 @@ $PoshV3ThemeContent =
           "foreground": "#007ACC",
           "properties": {
             "prefix": "",
-            "text": "❯"
+            "text": "\u276f"
           },
           "style": "plain",
           "type": "text"
