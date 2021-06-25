@@ -1,5 +1,12 @@
 #Requires -RunAsAdministrator
 
+[CmdletBinding()]
+param (
+    [Parameter()]
+    [switch]
+    $Deconfig
+)
+
 function Write-Registry
 {
     param (
@@ -42,6 +49,33 @@ function Write-Registry
         if (!(Test-Path $ClassPath\'shell\Format (pktmon)')) { (New-Item $ClassPath\'shell\Format (pktmon)' -Force).Name }
         if (!(Test-Path $ClassPath\'shell\Format (pktmon)\command')) { (New-Item $ClassPath\'shell\Format (pktmon)\command' -Force).Name }
         Set-ItemProperty -Path $ClassPath\'shell\Format (pktmon)\command' -Name '(default)' -Value "PowerShell.exe -NoProfile -File `"$StubPath`" -Etl `"%1`" -Mode pktmonformat" -Force
+    }
+}
+
+function Remove-Registry
+{
+    New-PSDrive -Name HKCR -PSProvider Registry -Root HKEY_CLASSES_ROOT | Out-Null
+    try
+    {
+        $EtlProperty = Get-ItemPropertyValue 'HKCR:\.etl' -Name '(default)' -ErrorAction Stop
+    }
+    catch
+    {
+        New-ItemProperty -Path 'HKCR:\.etl' -Name '(default)'
+        Set-ItemProperty 'HKCR:\.etl' -Name '(default)' -Value 'etl_auto_file'
+        $EtlProperty = 'etl_auto_file'
+    }
+    
+    [string[]] $ClassPaths = "HKCR:\$EtlProperty"
+    $ClassPaths += "HKCR:\.etl"
+    $ClassPaths += "HKCR:\SystemFileAssociations\.etl"
+    foreach ($ClassPath in $ClassPaths)
+    {
+        if ((Test-Path $ClassPath\'shell\Format (netsh)')) { Remove-Item $ClassPath\'shell\Format (netsh)' -Recurse -Force }
+        if ((Test-Path $ClassPath\'shell\Format (pktmon)')) { Remove-Item $ClassPath\'shell\Format (pktmon)' -Recurse -Force }
+        if ((Test-Path $ClassPath\'shell\Split Trace')) { Remove-Item $ClassPath\'shell\Split Trace' -Recurse -Force }
+        if ((Test-Path $ClassPath\'shell\Convert to pcapng')) { Remove-Item $ClassPath\'shell\Convert to pcapng' -Recurse -Force }
+        if ((Test-Path $ClassPath\'shell\Convert to pcapng (pktmon)')) { Remove-Item $ClassPath\'shell\Convert to pcapng (pktmon)' -Recurse -Force }
     }
 }
 
@@ -95,16 +129,19 @@ try
             New-Item -Path `$OutPath -ItemType Directory -Force | Out-Null
             EtwSplitter.exe `$EtlFile `$OutFile `$FileNum | Tee-Object -FilePath `$OutLog
         }
-        
         'pktmonformat'
         {
+            if (!(Test-Path `$TMFPath))
+            {
+                throw [System.IO.FileNotFoundException] "`$TMFPath not found."
+            }
             `$OutLog = `$EtlFile.DirectoryName + '\' + `$EtlFile.BaseName + '-pktmon_format_out.txt'
-            PktMon.exe format `$EtlFile -v 3 | Tee-Object -FilePath `$OutLog
+            PktMon.exe etl2txt `$EtlFile --verbose  --tmfpath `$TMFPath | Tee-Object -FilePath `$OutLog
         }
         'pktmonpcapng'
         {
             `$OutLog = `$EtlFile.DirectoryName + '\' + `$EtlFile.BaseName + '-pktmon_pcapng_out.txt'
-            PktMon.exe pcapng `$EtlFile | Tee-Object -FilePath `$OutLog
+            PktMon.exe etl2pcap `$EtlFile | Tee-Object -FilePath `$OutLog
         }
         Default {}
     }
@@ -118,9 +155,41 @@ catch
     Out-File -FilePath $StubPath -Encoding utf8 -InputObject $StubScript -Force
 }
 
+function Get-LatestRelease 
+{
+    $E2PApiUri = 'https://api.github.com/repos/microsoft/etl2pcapng/releases/latest'
+    $ESApiUri = 'https://api.github.com/repos/ryanries/ETWSplitter/releases/latest'
+
+    try
+    {
+        $E2PResponse = Invoke-WebRequest -Uri $E2PApiUri -ErrorAction Stop
+        $E2PDownloadUrl = (($E2PResponse.Content | ConvertFrom-Json).assets | Where-Object { $_.name -eq 'etl2pcapng.zip' })[0].browser_download_url
+    }
+    catch
+    {
+        "Fail to retrieve latest etl2pcapng download link! Fallback to v1.5.0"
+        $_[0]
+        $E2PDownloadUrl = 'https://github.com/microsoft/etl2pcapng/releases/download/1.5.0/etl2pcapng.zip'
+    } 
+
+    try
+    {
+        $ESResponse = Invoke-WebRequest -Uri $ESApiUri -ErrorAction Stop
+        $ESDownloadUrl = (($ESResponse.Content | ConvertFrom-Json).assets | Where-Object { $_.name -eq 'ETWSplitter.exe' })[0].browser_download_url
+    }
+    catch
+    {
+        "Fail to retrieve latest ETWSplitter download link! Fallback to v1.0"
+        $_[0]
+        $ESDownloadUrl = 'https://github.com/ryanries/ETWSplitter/releases/download/v1.0/ETWSplitter.exe'
+    }
+
+    return @($E2PDownloadUrl, $ESDownloadUrl)
+}
+
 function Write-Bin
 {
-    $Uris = @('https://github.com/microsoft/etl2pcapng/releases/download/v1.4.1/etl2pcapng.zip', 'https://github.com/ryanries/ETWSplitter/releases/download/v1.0/ETWSplitter.exe')
+    $Uris = Get-LatestRelease
     $Retry = 3
     $WebClient = New-Object System.Net.WebClient
 
@@ -145,7 +214,7 @@ function Write-Bin
             catch
             {
                 "Error happend during downloading!"
-                $_
+                $_[0]
             }
         } while (!(Test-Path $DestPath) -and ($AttemptCount -lt $Retry))
     }
@@ -166,9 +235,20 @@ function Write-Bin
 
 ## START OF SCRIPT ##
 
-$StubPath = '!'
-while (!(Test-Path $StubPath))
+if ($Deconfig)
 {
+    'Removing Shell Reigstration!'
+    Remove-Registry
+    exit
+}
+
+$StubPath = '!'
+while ((!(Test-Path $StubPath)))
+{
+    if ('!' -ne $StubPath)
+    {
+        "Path Not Found: $StubPath"
+    }
     $StubPath = Read-Host "Where do you want to save the stub script file? (Default - $env:SystemRoot)"
     if ('' -eq $StubPath)
     {
@@ -179,6 +259,10 @@ while (!(Test-Path $StubPath))
 $TMF = '!'
 while (!(Test-Path $TMF))
 {
+    if ('!' -ne $TMF)
+    {
+        "Path Not Found: $TMF"
+    }
     $TMF = Read-Host "Where is your TMF stored? (Default - $env:PUBLIC\TMF)"
     if ('' -eq $TMF)
     {

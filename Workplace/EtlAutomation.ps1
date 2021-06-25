@@ -40,16 +40,20 @@ try
             New-Item -Path $OutPath -ItemType Directory -Force | Out-Null
             EtwSplitter.exe $EtlFile $OutFile $FileNum | Tee-Object -FilePath $OutLog
         }
-        # For packet monitor on Windows 20H1
+        # Update PktMon syntax 
         'pktmonformat'
         {
+            if (!(Test-Path $TMFPath))
+            {
+                throw [System.IO.FileNotFoundException] "$TMFPath not found."
+            }
             $OutLog = $EtlFile.DirectoryName + '\' + $EtlFile.BaseName + '-pktmon_format_out.txt'
-            PktMon.exe format $EtlFile -v 3 | Tee-Object -FilePath $OutLog
+            PktMon.exe etl2txt $EtlFile --verbose  --tmfpath $TMFPath | Tee-Object -FilePath $OutLog
         }
         'pktmonpcapng'
         {
             $OutLog = $EtlFile.DirectoryName + '\' + $EtlFile.BaseName + '-pktmon_pcapng_out.txt'
-            PktMon.exe pcapng $EtlFile | Tee-Object -FilePath $OutLog
+            PktMon.exe etl2pcap $EtlFile | Tee-Object -FilePath $OutLog
         }
         Default {}
     }
