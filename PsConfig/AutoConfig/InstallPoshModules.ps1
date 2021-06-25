@@ -1,7 +1,7 @@
 [CmdletBinding()]
 param (
     [switch]
-    $PoshV3
+    $PoshV2
 )
 
 Write-Host '[Info] Installing/Upgrading oh-my-posh & posh-git'
@@ -14,14 +14,14 @@ if ($null -eq (Get-Module -Name 'oh-my-posh'))
         {
             Install-PackageProvider -Name NuGet -Force -ErrorAction Stop
         }
-        if ($PoshV3)
-        {
-            Install-Module -Name 'oh-my-posh' -Scope CurrentUser -Force -AllowClobber -ErrorAction Stop
-        }
-        else
+        if ($PoshV2)
         {
             Install-Module -Name 'posh-git' -Scope CurrentUser -Force -AllowClobber -ErrorAction Stop
             Install-Module -Name 'oh-my-posh' -Scope CurrentUser -MaximumVersion 2.0.487 -Force -AllowClobber -ErrorAction Stop
+        }
+        else
+        {
+            Install-Module -Name 'oh-my-posh' -Scope CurrentUser -Force -AllowClobber -ErrorAction Stop
         } 
     }
     catch

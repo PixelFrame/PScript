@@ -6,7 +6,7 @@ param (
     $Mode = 'Full',
 
     [switch]
-    $PoshV3
+    $PoshV2
 )
 
 @'
@@ -45,9 +45,9 @@ if (([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]:
         'Full'
         {
             Write-Host '[Info] Full Mode: All configuration will be installed/refreshed'
-            & $PSScriptRoot\AutoConfig\InstallPoshModules.ps1 -PoshV3:$PoshV3
-            & $PSScriptRoot\AutoConfig\WriteProfile.ps1 -PSType $PSType -PoshV3:$PoshV3
-            & $PSScriptRoot\AutoConfig\WritePoshTheme.ps1 -PSType $PSType -PoshV3:$PoshV3
+            & $PSScriptRoot\AutoConfig\InstallPoshModules.ps1 -PoshV2:$PoshV2
+            & $PSScriptRoot\AutoConfig\WriteProfile.ps1 -PSType $PSType -PoshV2:$PoshV2
+            & $PSScriptRoot\AutoConfig\WritePoshTheme.ps1 -PSType $PSType -PoshV2:$PoshV2
             & $PSScriptRoot\AutoConfig\SetColor.ps1
             & $PSScriptRoot\AutoConfig\InstallApps.ps1
             & $PSScriptRoot\AutoConfig\UpdateRegistry.ps1
@@ -58,8 +58,8 @@ if (([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]:
         'Profile'
         {
             Write-Host '[Info] Profile Mode: Will refresh PowerShell user profile and PoshTheme'
-            & $PSScriptRoot\AutoConfig\WriteProfile.ps1 -PSType $PSType -PoshV3:$PoshV3
-            & $PSScriptRoot\AutoConfig\WritePoshTheme.ps1 -PSType $PSType -PoshV3:$PoshV3
+            & $PSScriptRoot\AutoConfig\WriteProfile.ps1 -PSType $PSType -PoshV2:$PoshV2
+            & $PSScriptRoot\AutoConfig\WritePoshTheme.ps1 -PSType $PSType -PoshV2:$PoshV2
             break
         }
         'TerminalStyle'
@@ -73,9 +73,9 @@ if (([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]:
         'ModuleInstall'
         {
             Write-Host '[Info] Module Installation Mode: Will install/update posh modules and refresh PowerShell user profile and PoshTheme'
-            & $PSScriptRoot\AutoConfig\InstallPoshModules.ps1 -PoshV3:$PoshV3
-            & $PSScriptRoot\AutoConfig\WriteProfile.ps1 -PSType $PSType -PoshV3:$PoshV3
-            & $PSScriptRoot\AutoConfig\WritePoshTheme.ps1 -PSType $PSType -PoshV3:$PoshV3
+            & $PSScriptRoot\AutoConfig\InstallPoshModules.ps1 -PoshV2:$PoshV2
+            & $PSScriptRoot\AutoConfig\WriteProfile.ps1 -PSType $PSType -PoshV2:$PoshV2
+            & $PSScriptRoot\AutoConfig\WritePoshTheme.ps1 -PSType $PSType -PoshV2:$PoshV2
             break
         }
         'AppInstall'

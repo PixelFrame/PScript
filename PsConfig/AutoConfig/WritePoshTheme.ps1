@@ -5,7 +5,7 @@ param (
     $PSType,
     
     [switch]
-    $PoshV3
+    $PoshV2
 )
 
 
@@ -223,11 +223,11 @@ if (!(Test-Path $PoshV3ThemePath))
 }
 $PoshV3ThemePath += 'ParadoxCascadiaV3.json'
 
-if ($PoshV3)
+if ($PoshV2)
 {
-    Out-File -FilePath $PoshV3ThemePath -Encoding utf8 -InputObject $PoshV3ThemeContent
+    Out-File -FilePath $PoshV2ThemePath -Encoding utf8 -InputObject $PoshV2ThemeContent
 }
 else
 {
-    Out-File -FilePath $PoshV2ThemePath -Encoding utf8 -InputObject $PoshV2ThemeContent
+    Out-File -FilePath $PoshV3ThemePath -Encoding utf8 -InputObject $PoshV3ThemeContent
 }

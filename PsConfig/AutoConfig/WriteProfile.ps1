@@ -5,7 +5,7 @@ param (
     $PSType,
 
     [switch]
-    $PoshV3
+    $PoshV2
 )
 
 Write-Host '[Info] Writing to User PowerShell Profile'
@@ -15,15 +15,7 @@ $ProfilePath = $env:USERPROFILE + '\Documents\' + $PSType
 if (!(Test-Path -Path $ProfilePath)) { New-Item -Path $ProfilePath -ItemType Directory | Out-Null }
 if (!(Test-Path $ProfilePath\Scripts)) { New-Item -Path $ProfilePath\Scripts -ItemType Directory | Out-Null }
 
-if ($PoshV3)
-{
-    $ProfileContent = @"
-# Set Posh Theme
-Import-Module oh-my-posh
-Set-PoshPrompt -Theme '$env:USERPROFILE\.poshthemes\ParadoxCascadiaV3.json'
-"@
-}
-else
+if ($PoshV2)
 {
     $ProfileContent = @'
 # Set Posh Theme
@@ -31,6 +23,14 @@ Import-Module oh-my-posh
 Set-Theme ParadoxCascadia
 $ThemeSettings.Options.ConsoleTitle = $false
 '@
+}
+else
+{
+    $ProfileContent = @"
+# Set Posh Theme
+Import-Module oh-my-posh
+Set-PoshPrompt -Theme '$env:USERPROFILE\.poshthemes\ParadoxCascadiaV3.json'
+"@
 }
 
 if (!(Test-Path $ProfilePath\Scripts\Alias.ps1)) { New-Item -ItemType File -Path $ProfilePath\Scripts\Alias.ps1 | Out-Null }
