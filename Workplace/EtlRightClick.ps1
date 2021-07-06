@@ -1,10 +1,12 @@
-#Requires -RunAsAdministrator
-
 [CmdletBinding()]
 param (
     [Parameter()]
     [switch]
-    $Deconfig
+    $Deconfig,
+
+    [Parameter()]
+    [bool]
+    $UserMode = $true
 )
 
 function Write-Registry
@@ -19,11 +21,16 @@ function Write-Registry
     }
     catch
     {
+        New-Item 'HKCR:\.etl' -Force | Out-Null
         New-ItemProperty -Path 'HKCR:\.etl' -Name '(default)'
         Set-ItemProperty 'HKCR:\.etl' -Name '(default)' -Value 'etl_auto_file'
         $EtlProperty = 'etl_auto_file'
     }
     
+    Set-ItemProperty -Path 'HKCR:\.etl' -Name 'EtlStubPath' -Value $StubPath
+
+    $StubPath += '\EtlAutomation.ps1'
+
     [string[]] $ClassPaths = "HKCR:\$EtlProperty"
     $ClassPaths += "HKCR:\.etl"
     $ClassPaths += "HKCR:\SystemFileAssociations\.etl"
@@ -52,22 +59,69 @@ function Write-Registry
     }
 }
 
-function Remove-Registry
+function Write-RegistryUser
 {
-    New-PSDrive -Name HKCR -PSProvider Registry -Root HKEY_CLASSES_ROOT | Out-Null
+    param (
+        [Parameter()] [string] $StubPath
+    )
     try
     {
-        $EtlProperty = Get-ItemPropertyValue 'HKCR:\.etl' -Name '(default)' -ErrorAction Stop
+        $EtlProperty = Get-ItemPropertyValue 'HKCU:\SOFTWARE\Classes\.etl' -Name '(default)' -ErrorAction Stop
     }
     catch
     {
-        New-ItemProperty -Path 'HKCR:\.etl' -Name '(default)'
-        Set-ItemProperty 'HKCR:\.etl' -Name '(default)' -Value 'etl_auto_file'
+        New-Item 'HKCU:\SOFTWARE\Classes\.etl' -Force | Out-Null
+        New-ItemProperty -Path 'HKCU:\SOFTWARE\Classes\.etl' -Name '(default)'
+        Set-ItemProperty 'HKCU:\SOFTWARE\Classes\.etl' -Name '(default)' -Value 'etl_auto_file'
         $EtlProperty = 'etl_auto_file'
     }
+
+    Set-ItemProperty -Path 'HKCU:\SOFTWARE\Classes\.etl' -Name 'EtlStubPath' -Value $StubPath
+
+    $StubPath += '\EtlAutomation.ps1'
+
+    [string[]] $ClassPaths = "HKCU:\SOFTWARE\Classes\$EtlProperty"
+    $ClassPaths += "HKCU:\SOFTWARE\Classes\.etl"
+    $ClassPaths += "HKCU:\SOFTWARE\Classes\SystemFileAssociations\.etl"
     
-    [string[]] $ClassPaths = "HKCR:\$EtlProperty"
-    $ClassPaths += "HKCR:\.etl"
+    foreach ($ClassPath in $ClassPaths)
+    {
+        if (!(Test-Path $ClassPath\'shell')) { (New-Item $ClassPath\'shell' -Force).Name }
+        if (!(Test-Path $ClassPath\'shell\Format (netsh)')) { (New-Item $ClassPath\'shell\Format (netsh)' -Force).Name }
+        if (!(Test-Path $ClassPath\'shell\Format (netsh)\command')) { (New-Item $ClassPath\'shell\Format (netsh)\command' -Force).Name }
+        Set-ItemProperty -Path $ClassPath\'shell\Format (netsh)\command' -Name '(default)' -Value "PowerShell.exe -NoProfile -File `"$StubPath`" -Etl `"%1`" -Mode TMF" -Force
+
+        if (!(Test-Path $ClassPath\'shell\Split Trace')) { (New-Item $ClassPath\'shell\Split Trace' -Force).Name }
+        if (!(Test-Path $ClassPath\'shell\Split Trace\command')) { (New-Item $ClassPath\'shell\Split Trace\command' -Force).Name }
+        Set-ItemProperty -Path $ClassPath\'shell\Split Trace\command' -Name '(default)' -Value "PowerShell.exe -NoProfile -File `"$StubPath`" -Etl `"%1`" -Mode Split" -Force
+    
+        if (!(Test-Path $ClassPath\'shell\Convert to pcapng')) { (New-Item $ClassPath\'shell\Convert to pcapng' -Force).Name }
+        if (!(Test-Path $ClassPath\'shell\Convert to pcapng\command')) { (New-Item $ClassPath\'shell\Convert to pcapng\command' -Force).Name }
+        Set-ItemProperty -Path $ClassPath\'shell\Convert to pcapng\command' -Name '(default)' -Value "PowerShell.exe -NoProfile -File `"$StubPath`" -Etl `"%1`" -Mode pcapng" -Force
+        
+        if (!(Test-Path $ClassPath\'shell\Convert to pcapng (pktmon)')) { (New-Item $ClassPath\'shell\Convert to pcapng (pktmon)' -Force).Name }
+        if (!(Test-Path $ClassPath\'shell\Convert to pcapng (pktmon)\command')) { (New-Item $ClassPath\'shell\Convert to pcapng (pktmon)\command' -Force).Name }
+        Set-ItemProperty -Path $ClassPath\'shell\Convert to pcapng (pktmon)\command' -Name '(default)' -Value "PowerShell.exe -NoProfile -File `"$StubPath`" -Etl `"%1`" -Mode pktmonpcapng" -Force
+        
+        if (!(Test-Path $ClassPath\'shell\Format (pktmon)')) { (New-Item $ClassPath\'shell\Format (pktmon)' -Force).Name }
+        if (!(Test-Path $ClassPath\'shell\Format (pktmon)\command')) { (New-Item $ClassPath\'shell\Format (pktmon)\command' -Force).Name }
+        Set-ItemProperty -Path $ClassPath\'shell\Format (pktmon)\command' -Name '(default)' -Value "PowerShell.exe -NoProfile -File `"$StubPath`" -Etl `"%1`" -Mode pktmonformat" -Force
+    }
+}
+
+function Remove-Registry
+{
+    New-PSDrive -Name HKCR -PSProvider Registry -Root HKEY_CLASSES_ROOT | Out-Null
+    [string[]] $ClassPaths = "HKCR:\.etl"
+    try
+    {
+        $EtlProperty = Get-ItemPropertyValue 'HKCR:\.etl' -Name '(default)' -ErrorAction Stop
+        $ClassPaths += "HKCR:\$EtlProperty"
+    }
+    catch
+    {
+        "No ETL Class!"
+    }
     $ClassPaths += "HKCR:\SystemFileAssociations\.etl"
     foreach ($ClassPath in $ClassPaths)
     {
@@ -77,6 +131,31 @@ function Remove-Registry
         if ((Test-Path $ClassPath\'shell\Convert to pcapng')) { Remove-Item $ClassPath\'shell\Convert to pcapng' -Recurse -Force }
         if ((Test-Path $ClassPath\'shell\Convert to pcapng (pktmon)')) { Remove-Item $ClassPath\'shell\Convert to pcapng (pktmon)' -Recurse -Force }
     }
+    Remove-ItemProperty -Path "HKCR:\.etl" -Name 'EtlStubPath'
+}
+
+function Remove-RegistryUser
+{
+    [string[]] $ClassPaths = "HKCU:\SOFTWARE\Classes\.etl"
+    try
+    {
+        $EtlProperty = Get-ItemPropertyValue 'HKCU:\SOFTWARE\Classes\.etl' -Name '(default)' -ErrorAction Stop
+        $ClassPaths += "HKCU:\SOFTWARE\Classes\$EtlProperty"
+    }
+    catch
+    {
+        "No ETL Class!"
+    }
+    $ClassPaths += "HKCU:\SOFTWARE\Classes\SystemFileAssociations\.etl"
+    foreach ($ClassPath in $ClassPaths)
+    {
+        if ((Test-Path $ClassPath\'shell\Format (netsh)')) { Remove-Item $ClassPath\'shell\Format (netsh)' -Recurse -Force }
+        if ((Test-Path $ClassPath\'shell\Format (pktmon)')) { Remove-Item $ClassPath\'shell\Format (pktmon)' -Recurse -Force }
+        if ((Test-Path $ClassPath\'shell\Split Trace')) { Remove-Item $ClassPath\'shell\Split Trace' -Recurse -Force }
+        if ((Test-Path $ClassPath\'shell\Convert to pcapng')) { Remove-Item $ClassPath\'shell\Convert to pcapng' -Recurse -Force }
+        if ((Test-Path $ClassPath\'shell\Convert to pcapng (pktmon)')) { Remove-Item $ClassPath\'shell\Convert to pcapng (pktmon)' -Recurse -Force }
+    }
+    Remove-ItemProperty -Path "HKCU:\SOFTWARE\Classes\.etl" -Name 'EtlStubPath'
 }
 
 function Write-StubScript
@@ -152,7 +231,7 @@ catch
     Pause
 }
 "@
-    Out-File -FilePath $StubPath -Encoding utf8 -InputObject $StubScript -Force
+    Out-File -FilePath ($StubPath + '\EtlAutomation.ps1') -Encoding utf8 -InputObject $StubScript -Force
 }
 
 function Get-LatestRelease 
@@ -189,6 +268,33 @@ function Get-LatestRelease
 
 function Write-Bin
 {
+    param (
+        [Parameter()] [string] $StubPath,
+        [Parameter()] [bool] $UserMode
+    )
+
+    if ($UserMode)
+    {
+        $UserEnvPath = [System.Environment]::GetEnvironmentVariable("Path", "User")
+        if ($UserEnvPath.Split(';') -notcontains $StubPath)
+        {
+            "Adding stub file path $StubPath to user environment PATH"
+            $UserEnvPath += ";$StubPath"
+            [System.Environment]::SetEnvironmentVariable("Path", $UserEnvPath, "User")
+        }
+    }
+    else
+    {
+        $MachineEnvPath = [System.Environment]::GetEnvironmentVariable("Path", "Machine")
+        if ($UserEnvPath.Split(';') -notcontains $StubPath)
+        {
+            "Adding stub file path $StubPath to Machine environment PATH"
+            $MachineEnvPath += ";$StubPath"
+            [System.Environment]::SetEnvironmentVariable("Path", $MachineEnvPath, "Machine")
+        }
+    }
+
+
     $Uris = Get-LatestRelease
     $Retry = 3
     $WebClient = New-Object System.Net.WebClient
@@ -221,9 +327,9 @@ function Write-Bin
 
     if ((Test-Path ~\EtwSplitter.exe) -and (Test-Path ~\etl2pcapng.zip))
     {
-        Move-Item -Path ~\EtwSplitter.exe -Destination $env:SystemRoot\EtwSplitter.exe -Force
+        Move-Item -Path ~\EtwSplitter.exe -Destination $StubPath\EtwSplitter.exe -Force
         Expand-Archive -Path ~\etl2pcapng.zip -DestinationPath ~\
-        Move-Item -Path ~\etl2pcapng\x64\etl2pcapng.exe -Destination $env:SystemRoot\etl2pcapng.exe -Force
+        Move-Item -Path ~\etl2pcapng\x64\etl2pcapng.exe -Destination $StubPath\etl2pcapng.exe -Force
     }
     else
     {
@@ -237,24 +343,74 @@ function Write-Bin
 
 if ($Deconfig)
 {
-    'Removing Shell Reigstration!'
-    Remove-Registry
-    exit
+    if ($UserMode)
+    {
+        $StubPath = Get-ItemPropertyValue -Path 'HKCU:\SOFTWARE\Classes\.etl' -Name 'EtlStubPath' -ErrorAction SilentlyContinue
+        if (Test-Path $StubPath)
+        {
+            "Stub file path: $StubPath"
+            $IsRemoveStub = Read-Host "Do you want to remove stub file path? Y/N"
+            if ($IsRemoveStub -in @('y', 'Y'))
+            {
+                Remove-Item -Path $StubPath -Recurse -Force
+            }
+            $IsRemoveStubFromPath = Read-Host "Do you want to remove stub file path from Environment Path? Y/N"
+            if ($IsRemoveStubFromPath -in @('y', 'Y'))
+            {
+                $UserEnvPath = ([System.Environment]::GetEnvironmentVariable("Path", "User").Split(';') | Where-Object { $_ -ne $StubPath }) -join ';'
+                [System.Environment]::SetEnvironmentVariable("Path", $UserEnvPath, "User")
+            }
+        }
+        'Removing Shell Reigstration!'
+        Remove-RegistryUser
+    }
+    else
+    {
+        New-PSDrive -Name HKCR -PSProvider Registry -Root HKEY_CLASSES_ROOT | Out-Null
+        $StubPath = Get-ItemPropertyValue -Path 'HKCR:\.etl' -Name 'EtlStubPath' -ErrorAction SilentlyContinue
+        if (Test-Path $StubPath)
+        {
+            "Stub file path: $StubPath"
+            $IsRemoveStub = Read-Host "Do you want to remove stub file path? Y/N"
+            if ($IsRemoveStub -in @('y', 'Y'))
+            {
+                Remove-Item -Path $StubPath -Recurse -Force
+            }
+            $IsRemoveStubFromPath = Read-Host "Do you want to remove stub file path from Environment Path? Y/N"
+            if ($IsRemoveStubFromPath -in @('y', 'Y'))
+            {
+                $MachineEnvPath = ([System.Environment]::GetEnvironmentVariable("Path", "Machine").Split(';') | Select-Object { $_ -ne $StubPath }) -join ';'
+                [System.Environment]::SetEnvironmentVariable("Path", $UserEnvPath, "Machine")
+            }
+        }
+        else
+        {
+            "Invalid stub file path: $StubPath"
+        }
+        'Removing Shell Reigstration!'
+        Remove-Registry
+    }
+    Pause; exit
 }
 
-$StubPath = '!'
-while ((!(Test-Path $StubPath)))
+$StubPath = Read-Host "Where do you want to save the stub script file and the tools? (Default: $env:USERPROFILE\Tools, path will be created if not exist)"
+if ('' -eq $StubPath)
 {
-    if ('!' -ne $StubPath)
+    $StubPath = $env:USERPROFILE + '\Tools'
+}
+if (!(Test-Path $StubPath))
+{
+    try
     {
-        "Path Not Found: $StubPath"
+        mkdir $StubPath -ErrorAction Stop | Out-Null
     }
-    $StubPath = Read-Host "Where do you want to save the stub script file? (Default - $env:SystemRoot)"
-    if ('' -eq $StubPath)
+    catch
     {
-        $StubPath = $env:SystemRoot
+        "Unable to create stub file path: $StubPath"
+        Pause; exit
     }
 }
+
 
 $TMF = '!'
 while (!(Test-Path $TMF))
@@ -270,13 +426,18 @@ while (!(Test-Path $TMF))
     }
 }
 
-$StubPath += '\EtlAutomation.ps1'
-
 Write-Host "Writing Stub File"
 Write-StubScript -StubPath $StubPath -TMF $TMF
 
 Write-Host "Registering to Right Click Menu"
-Write-Registry -StubPath $StubPath
+if ($UserMode)
+{
+    Write-RegistryUser -StubPath $StubPath
+}
+else
+{
+    Write-Registry -StubPath $StubPath
+}
 
 try
 {
@@ -286,6 +447,8 @@ try
 }
 catch
 {
-    "Downloading etl2pcapng and ETWSplitter to $env:SystemRoot"
-    Write-Bin
+    "Downloading etl2pcapng and ETWSplitter to $StubPath"
+    Write-Bin -StubPath $StubPath -UserMode $UserMode
 }
+
+Pause
