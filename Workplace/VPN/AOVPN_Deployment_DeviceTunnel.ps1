@@ -38,7 +38,7 @@ $ProfileXML =
         <PrefixSize>24</PrefixSize>
     </Route>
     <DeviceTunnel>true</DeviceTunnel>
-    <RegiserDns>true</RegisterDns>
+    <RegisterDns>true</RegisterDns>
 </VPNProfile>
 '@
 
