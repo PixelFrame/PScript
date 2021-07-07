@@ -47,8 +47,9 @@ try
             {
                 throw [System.IO.FileNotFoundException] "$TMFPath not found."
             }
+            $OutFile = $EtlFile.DirectoryName + '\' + $EtlFile.BaseName + '-pktmon-FMT.txt'
             $OutLog = $EtlFile.DirectoryName + '\' + $EtlFile.BaseName + '-pktmon_format_out.txt'
-            PktMon.exe etl2txt $EtlFile --verbose  --tmfpath $TMFPath | Tee-Object -FilePath $OutLog
+            PktMon.exe etl2txt $EtlFile --verbose 3 --tmfpath $TMFPath -out $OutFile | Tee-Object -FilePath $OutLog
         }
         'pktmonpcapng'
         {
