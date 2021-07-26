@@ -380,7 +380,7 @@ if ($Deconfig)
             $IsRemoveStubFromPath = Read-Host "Do you want to remove stub file path from Environment Path? Y/N"
             if ($IsRemoveStubFromPath -in @('y', 'Y'))
             {
-                $MachineEnvPath = ([System.Environment]::GetEnvironmentVariable("Path", "Machine").Split(';') | Select-Object { $_ -ne $StubPath }) -join ';'
+                $MachineEnvPath = ([System.Environment]::GetEnvironmentVariable("Path", "Machine").Split(';') | Where-Object { $_ -ne $StubPath }) -join ';'
                 [System.Environment]::SetEnvironmentVariable("Path", $UserEnvPath, "Machine")
             }
         }
