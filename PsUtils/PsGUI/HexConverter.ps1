@@ -74,8 +74,7 @@ function DoConvert
     $HexBytes = StringToByteArray($HexString)
     if ($null -eq $HexBytes)
     {
-        $Result = 'Invalid HEX string'
-        return
+        return 'Invalid HEX string'
     }
     switch ($Encoding)
     {
@@ -120,7 +119,10 @@ function GetHexVal
         $hex
     )
     $val = [int] $hex;
-    return $val - ($val -lt 58 ? 48 : ($val -lt 97 ? 55 : 87));
+    if ($val -lt 58) { $val -= 48 }
+    elseif ($val -lt 97) { $val -= 55 }
+    else { $val -= 87 }
+    return $val;
 }
 
 [System.Windows.Forms.Application]::EnableVisualStyles()
@@ -166,7 +168,7 @@ $tableLayoutPanel2.Controls.Add($button1, 0, 0);
 $tableLayoutPanel2.Controls.Add($button2, 1, 0);
 $tableLayoutPanel2.Controls.Add($button3, 2, 0);
 $tableLayoutPanel2.Dock = [System.Windows.Forms.DockStyle]::Fill;
-$tableLayoutPanel1.Size = New-Object System.Drawing.Size -ArgumentList @(800, 30);
+$tableLayoutPanel2.Size = New-Object System.Drawing.Size -ArgumentList @(800, 30);
 $tableLayoutPanel2.Name = "tableLayoutPanel2";
 
 $groupBox1.Controls.Add($textBox1);
@@ -174,7 +176,6 @@ $groupBox1.Dock = [System.Windows.Forms.DockStyle]::Fill;
 $groupBox1.Location = New-Object System.Drawing.Point -ArgumentList @(3, 3);
 $groupBox1.Name = "groupBox1";
 $groupBox1.Size = New-Object System.Drawing.Size -ArgumentList @(794, 204);
-$groupBox1.TabIndex = 0;
 $groupBox1.TabStop = $false;
 $groupBox1.Text = "HEX";
 
