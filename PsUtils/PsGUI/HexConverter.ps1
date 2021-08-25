@@ -23,6 +23,12 @@ function onUnicode
     $textBox2.Text = DoConvert 'Unicode' $HexString
 }
 
+function onWordWarp
+{
+    $textBox2.WordWrap = $checkBox.Checked;
+
+}
+
 function SplitOnNull
 {
     [CmdletBinding()]
@@ -137,6 +143,7 @@ $textBox2 = New-Object System.Windows.Forms.TextBox
 $button1 = New-Object System.Windows.Forms.Button
 $button2 = New-Object System.Windows.Forms.Button
 $button3 = New-Object System.Windows.Forms.Button
+$checkBox = New-Object System.Windows.Forms.CheckBox
 
 $Form.ClientSize = New-Object System.Drawing.Point(800, 450)
 $Form.Text = "HEX Converter"
@@ -158,7 +165,8 @@ $tableLayoutPanel1.RowStyles.Add((New-Object System.Windows.Forms.RowStyle -Argu
 $tableLayoutPanel1.RowStyles.Add((New-Object System.Windows.Forms.RowStyle -ArgumentList @([System.Windows.Forms.SizeType]::Absolute, 30)));
 $tableLayoutPanel1.Size = New-Object System.Drawing.Size -ArgumentList @(800, 450);
 
-$tableLayoutPanel2.ColumnCount = 3;
+$tableLayoutPanel2.ColumnCount = 4;
+$tableLayoutPanel2.ColumnStyles.Add((New-Object System.Windows.Forms.ColumnStyle -ArgumentList @([System.Windows.Forms.SizeType]::Absolute, 80)));
 $tableLayoutPanel2.ColumnStyles.Add((New-Object System.Windows.Forms.ColumnStyle -ArgumentList @([System.Windows.Forms.SizeType]::Absolute, 80)));
 $tableLayoutPanel2.ColumnStyles.Add((New-Object System.Windows.Forms.ColumnStyle -ArgumentList @([System.Windows.Forms.SizeType]::Absolute, 80)));
 $tableLayoutPanel2.ColumnStyles.Add((New-Object System.Windows.Forms.ColumnStyle -ArgumentList @([System.Windows.Forms.SizeType]::Absolute, 80)));
@@ -167,6 +175,7 @@ $tableLayoutPanel2.RowStyles.Add((New-Object System.Windows.Forms.RowStyle -Argu
 $tableLayoutPanel2.Controls.Add($button1, 0, 0);
 $tableLayoutPanel2.Controls.Add($button2, 1, 0);
 $tableLayoutPanel2.Controls.Add($button3, 2, 0);
+$tableLayoutPanel2.Controls.Add($checkBox, 3, 0);
 $tableLayoutPanel2.Dock = [System.Windows.Forms.DockStyle]::Fill;
 $tableLayoutPanel2.Size = New-Object System.Drawing.Size -ArgumentList @(800, 30);
 $tableLayoutPanel2.Name = "tableLayoutPanel2";
@@ -201,7 +210,8 @@ $textBox2.Multiline = $true;
 $textBox2.Name = "textBox2";
 $textBox2.ReadOnly = $true;
 $textBox2.Size = New-Object System.Drawing.Size -ArgumentList @(788, 182);
-$textBox2.ScrollBars = [System.Windows.Forms.ScrollBars]::Vertical;
+$textBox2.ScrollBars = [System.Windows.Forms.ScrollBars]::Both
+$textBox2.WordWrap = $false
 $textBox2.Font = New-Object System.Drawing.Font('Consolas', 10);
 
 $button1.Location = New-Object System.Drawing.Point -ArgumentList @(3, 423);
@@ -224,6 +234,12 @@ $button3.Size = New-Object System.Drawing.Size -ArgumentList @(75, 23);
 $button3.Text = "Unicode";
 $button3.UseVisualStyleBackColor = $true;
 $button3.Add_Click( { onUnicode })
+
+$checkBox.Name = "checkBox";
+$checkBox.Text = "Word Wrap"
+$checkBox.Checked = $false;
+$checkBox.CheckState = [System.Windows.Forms.CheckState]::Unchecked;
+$checkBox.Add_Click( { onWordWarp } )
 
 $Form.Controls.AddRange(@($tableLayoutPanel1))
 
