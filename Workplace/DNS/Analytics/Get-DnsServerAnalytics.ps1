@@ -20,6 +20,7 @@ if (Get-WinEvent -ListLog $EventLogName -ErrorAction SilentlyContinue)
 else
 {
     Write-Error "Microsoft-Windows-DNSServer/Analytical log is not enabled!"
+    exit
 }
     
 if (Test-Path $DNSAnalyticalLogPath)
@@ -30,5 +31,5 @@ else
 {
     Write-Warning "The $($EventLogName) log doesn't exist at the expected path:"
     Write-Host "`n$($DNSAnalyticalLogPath)"
-    return
+    exit
 }
