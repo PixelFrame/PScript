@@ -1,26 +1,33 @@
 [CmdletBinding()]
 param (
+    [string] $InputEtl = ''
 )
 
 $EventLogName = 'Microsoft-Windows-DNSServer/Analytical'
 
-if (Get-WinEvent -ListLog $EventLogName -ErrorAction SilentlyContinue)
+if ($InputEtl -eq '')
 {
-    $DNSAnalyticalLogData = Get-WinEvent -ListLog $EventLogName
-    if (($DNSAnalyticalLogData.LogFilePath).split("\")[0] -eq '%SystemRoot%')
-    { 
-        $DNSAnalyticalLogPath = $DNSAnalyticalLogData.LogFilePath.Replace('%SystemRoot%', "$env:Windir") 
+    if (Get-WinEvent -ListLog $EventLogName -ErrorAction SilentlyContinue)
+    {
+        $DNSAnalyticalLogData = Get-WinEvent -ListLog $EventLogName
+        if (($DNSAnalyticalLogData.LogFilePath).split("\")[0] -eq '%SystemRoot%')
+        { 
+            $DNSAnalyticalLogPath = $DNSAnalyticalLogData.LogFilePath.Replace('%SystemRoot%', "$env:Windir") 
+        }
+        else
+        {
+            $DNSAnalyticalLogPath = $DNSAnalyticalLogData.LogFilePath
+        }
     }
     else
     {
-        $DNSAnalyticalLogPath = $DNSAnalyticalLogData.LogFilePath
+        Write-Error "Microsoft-Windows-DNSServer/Analytical log is not enabled!"
+        exit
     }
-
 }
 else
 {
-    Write-Error "Microsoft-Windows-DNSServer/Analytical log is not enabled!"
-    exit
+    $DNSAnalyticalLogPath = $InputEtl
 }
     
 if (Test-Path $DNSAnalyticalLogPath)
