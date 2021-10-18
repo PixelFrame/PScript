@@ -2,7 +2,7 @@
 param (
     [Parameter()] [string]                                                   $Path,
     [Parameter()] [string]                                                   $FileName,
-    [Parameter()] [int]    [ValidateRange(1,[System.Int32]::MaxValue)]       $MaxSize
+    [Parameter()] [Int64]    [ValidateRange(1, [System.Int64]::MaxValue)]       $MaxSize
 )
 
 if ($Path -eq '')

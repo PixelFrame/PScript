@@ -23,7 +23,7 @@ if (Test-Path $PSScriptRoot\Start-WebServer_EXTERNAL.ps1)
 }
 else
 {
-    $WebSrvScriptUrl = 'https://gallery.technet.microsoft.com/scriptcenter/Powershell-Webserver-74dcf466/file/162511/3/Start-WebServer.ps1'
+    $WebSrvScriptUrl = 'https://raw.githubusercontent.com/MScholtes/WebServer/master/Module/Start-Webserver.ps1'
     $WebSrvScript = [System.Text.Encoding]::UTF8.GetString((Invoke-WebRequest -Uri $WebSrvScriptUrl).Content).Replace('".avi"="video/x-msvideo"', '".pac"="application/x-ns-proxy-autoconfig"; ".avi"="video/x-msvideo"')
     $WebSrvScript | Out-File $PSScriptRoot\Start-WebServer_EXTERNAL.ps1
     Start-Process -FilePath PowerShell.exe -ArgumentList @("-File $PSScriptRoot\Start-WebServer_EXTERNAL.ps1 -BINDING $Binding") -WindowStyle Hidden
@@ -165,6 +165,16 @@ Add-Type -TypeDefinition $Win32CallDef -ErrorAction Stop
 Write-Host "`nWinHttpGetProxyForUrl with Manual PAC" -ForegroundColor Blue
 
 $SessionHandle = [WinHttp]::WinHttpOpen("PWSH PINVOKE WINHTTP CLIENT/1.0", [AccessType]::WINHTTP_ACCESS_TYPE_NO_PROXY, "", "", 0);
+
+$ResetResult = [WinHttp]::WinHttpResetAutoProxy($SessionHandle, [ResetFlag]::WINHTTP_RESET_ALL -bor [ResetFlag]::WINHTTP_RESET_OUT_OF_PROC)
+if ($ResetResult -eq 0)
+{
+    "WinHTTP AutoProxy Reset Successfully"
+}
+else
+{
+    "WinHTTP AutoProxy Reset Failed: $ResetResult. The result may not be accurate."
+}
 
 $AutoProxyOptions = New-Object WINHTTP_AUTOPROXY_OPTIONS
 $AutoProxyOptions.dwFlags = [AutoProxyFlag]::WINHTTP_AUTOPROXY_CONFIG_URL

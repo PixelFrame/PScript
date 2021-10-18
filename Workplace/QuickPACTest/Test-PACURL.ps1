@@ -37,17 +37,6 @@ $Win32CallDef = @'
             ref WINHTTP_PROXY_INFO pProxyInfo);
 
         [DllImport("winhttp.dll", CharSet = CharSet.Unicode, SetLastError = true)]
-        public static extern bool WinHttpGetDefaultProxyConfiguration(ref WINHTTP_PROXY_INFO pProxyInfo);
-
-        [DllImport("winhttp.dll", CharSet = CharSet.Unicode, SetLastError = true)]
-        public static extern bool WinHttpGetIEProxyConfigForCurrentUser(ref WINHTTP_CURRENT_USER_IE_PROXY_CONFIG pProxyInfo);
-
-        [DllImport("winhttp.dll", CharSet = CharSet.Unicode, SetLastError = true)]
-        public static extern bool WinHttpDetectAutoProxyConfigUrl(
-            AutoDetectFlag dwAutoDetectFlags,
-            ref string ppwstrAutoConfigUrl);
-
-        [DllImport("winhttp.dll", CharSet = CharSet.Unicode, SetLastError = true)]
         public static extern int WinHttpResetAutoProxy(
             IntPtr hSession,
             ResetFlag dwFlags);
@@ -115,15 +104,6 @@ $Win32CallDef = @'
         public string lpszProxyBypass;
     }
 
-    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
-    public struct WINHTTP_CURRENT_USER_IE_PROXY_CONFIG
-    {
-        public bool fAutoDetect;
-        public string lpszAutoConfigUrl;
-        public string lpszProxy;
-        public string lpszProxyBypass;
-    }
-
     [Flags]
     public enum ResetFlag
     {
@@ -144,6 +124,16 @@ Write-Host "`nWinHttpGetProxyForUrl with Manual PAC" -ForegroundColor Blue
 
 $SessionHandle = [WinHttp]::WinHttpOpen("PWSH PINVOKE WINHTTP CLIENT/1.0", [AccessType]::WINHTTP_ACCESS_TYPE_NO_PROXY, "", "", 0);
 
+$ResetResult = [WinHttp]::WinHttpResetAutoProxy($SessionHandle, [ResetFlag]::WINHTTP_RESET_ALL -bor [ResetFlag]::WINHTTP_RESET_OUT_OF_PROC)
+if ($ResetResult -eq 0)
+{
+    "WinHTTP AutoProxy Reset Successfully"
+}
+else
+{
+    "WinHTTP AutoProxy Reset Failed: $ResetResult. The result may not be accurate."
+}
+
 $AutoProxyOptions = New-Object WINHTTP_AUTOPROXY_OPTIONS
 $AutoProxyOptions.dwFlags = [AutoProxyFlag]::WINHTTP_AUTOPROXY_CONFIG_URL
 $AutoProxyOptions.lpszAutoConfigUrl = $PacUrl
@@ -162,5 +152,3 @@ else
 }
 
 [WinHttp]::WinHttpCloseHandle($SessionHandle) | Out-Null
-
-Pause
