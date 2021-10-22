@@ -6,7 +6,10 @@ param (
 
     [Parameter()]
     [bool]
-    $UserMode = $true
+    $UserMode = $true,
+
+    [switch]
+    $Pwsh
 )
 
 function Write-Registry
@@ -39,23 +42,23 @@ function Write-Registry
         if (!(Test-Path $ClassPath\'shell')) { (New-Item $ClassPath\'shell' -Force).Name }
         if (!(Test-Path $ClassPath\'shell\Format (netsh)')) { (New-Item $ClassPath\'shell\Format (netsh)' -Force).Name }
         if (!(Test-Path $ClassPath\'shell\Format (netsh)\command')) { (New-Item $ClassPath\'shell\Format (netsh)\command' -Force).Name }
-        Set-ItemProperty -Path $ClassPath\'shell\Format (netsh)\command' -Name '(default)' -Value "PowerShell.exe -NoProfile -File `"$StubPath`" -Etl `"%1`" -Mode TMF" -Force
+        Set-ItemProperty -Path $ClassPath\'shell\Format (netsh)\command' -Name '(default)' -Value "$Global:PwshExec -NoProfile -File `"$StubPath`" -Etl `"%1`" -Mode TMF" -Force
 
         if (!(Test-Path $ClassPath\'shell\Split Trace')) { (New-Item $ClassPath\'shell\Split Trace' -Force).Name }
         if (!(Test-Path $ClassPath\'shell\Split Trace\command')) { (New-Item $ClassPath\'shell\Split Trace\command' -Force).Name }
-        Set-ItemProperty -Path $ClassPath\'shell\Split Trace\command' -Name '(default)' -Value "PowerShell.exe -NoProfile -File `"$StubPath`" -Etl `"%1`" -Mode Split" -Force
+        Set-ItemProperty -Path $ClassPath\'shell\Split Trace\command' -Name '(default)' -Value "$Global:PwshExec -NoProfile -File `"$StubPath`" -Etl `"%1`" -Mode Split" -Force
     
         if (!(Test-Path $ClassPath\'shell\Convert to pcapng')) { (New-Item $ClassPath\'shell\Convert to pcapng' -Force).Name }
         if (!(Test-Path $ClassPath\'shell\Convert to pcapng\command')) { (New-Item $ClassPath\'shell\Convert to pcapng\command' -Force).Name }
-        Set-ItemProperty -Path $ClassPath\'shell\Convert to pcapng\command' -Name '(default)' -Value "PowerShell.exe -NoProfile -File `"$StubPath`" -Etl `"%1`" -Mode pcapng" -Force
+        Set-ItemProperty -Path $ClassPath\'shell\Convert to pcapng\command' -Name '(default)' -Value "$Global:PwshExec -NoProfile -File `"$StubPath`" -Etl `"%1`" -Mode pcapng" -Force
         
         if (!(Test-Path $ClassPath\'shell\Convert to pcapng (pktmon)')) { (New-Item $ClassPath\'shell\Convert to pcapng (pktmon)' -Force).Name }
         if (!(Test-Path $ClassPath\'shell\Convert to pcapng (pktmon)\command')) { (New-Item $ClassPath\'shell\Convert to pcapng (pktmon)\command' -Force).Name }
-        Set-ItemProperty -Path $ClassPath\'shell\Convert to pcapng (pktmon)\command' -Name '(default)' -Value "PowerShell.exe -NoProfile -File `"$StubPath`" -Etl `"%1`" -Mode pktmonpcapng" -Force
+        Set-ItemProperty -Path $ClassPath\'shell\Convert to pcapng (pktmon)\command' -Name '(default)' -Value "$Global:PwshExec -NoProfile -File `"$StubPath`" -Etl `"%1`" -Mode pktmonpcapng" -Force
         
         if (!(Test-Path $ClassPath\'shell\Format (pktmon)')) { (New-Item $ClassPath\'shell\Format (pktmon)' -Force).Name }
         if (!(Test-Path $ClassPath\'shell\Format (pktmon)\command')) { (New-Item $ClassPath\'shell\Format (pktmon)\command' -Force).Name }
-        Set-ItemProperty -Path $ClassPath\'shell\Format (pktmon)\command' -Name '(default)' -Value "PowerShell.exe -NoProfile -File `"$StubPath`" -Etl `"%1`" -Mode pktmonformat" -Force
+        Set-ItemProperty -Path $ClassPath\'shell\Format (pktmon)\command' -Name '(default)' -Value "$Global:PwshExec -NoProfile -File `"$StubPath`" -Etl `"%1`" -Mode pktmonformat" -Force
     }
 }
 
@@ -89,23 +92,23 @@ function Write-RegistryUser
         if (!(Test-Path $ClassPath\'shell')) { (New-Item $ClassPath\'shell' -Force).Name }
         if (!(Test-Path $ClassPath\'shell\Format (netsh)')) { (New-Item $ClassPath\'shell\Format (netsh)' -Force).Name }
         if (!(Test-Path $ClassPath\'shell\Format (netsh)\command')) { (New-Item $ClassPath\'shell\Format (netsh)\command' -Force).Name }
-        Set-ItemProperty -Path $ClassPath\'shell\Format (netsh)\command' -Name '(default)' -Value "PowerShell.exe -NoProfile -File `"$StubPath`" -Etl `"%1`" -Mode TMF" -Force
+        Set-ItemProperty -Path $ClassPath\'shell\Format (netsh)\command' -Name '(default)' -Value "$Global:PwshExec -NoProfile -File `"$StubPath`" -Etl `"%1`" -Mode TMF" -Force
 
         if (!(Test-Path $ClassPath\'shell\Split Trace')) { (New-Item $ClassPath\'shell\Split Trace' -Force).Name }
         if (!(Test-Path $ClassPath\'shell\Split Trace\command')) { (New-Item $ClassPath\'shell\Split Trace\command' -Force).Name }
-        Set-ItemProperty -Path $ClassPath\'shell\Split Trace\command' -Name '(default)' -Value "PowerShell.exe -NoProfile -File `"$StubPath`" -Etl `"%1`" -Mode Split" -Force
+        Set-ItemProperty -Path $ClassPath\'shell\Split Trace\command' -Name '(default)' -Value "$Global:PwshExec -NoProfile -File `"$StubPath`" -Etl `"%1`" -Mode Split" -Force
     
         if (!(Test-Path $ClassPath\'shell\Convert to pcapng')) { (New-Item $ClassPath\'shell\Convert to pcapng' -Force).Name }
         if (!(Test-Path $ClassPath\'shell\Convert to pcapng\command')) { (New-Item $ClassPath\'shell\Convert to pcapng\command' -Force).Name }
-        Set-ItemProperty -Path $ClassPath\'shell\Convert to pcapng\command' -Name '(default)' -Value "PowerShell.exe -NoProfile -File `"$StubPath`" -Etl `"%1`" -Mode pcapng" -Force
+        Set-ItemProperty -Path $ClassPath\'shell\Convert to pcapng\command' -Name '(default)' -Value "$Global:PwshExec -NoProfile -File `"$StubPath`" -Etl `"%1`" -Mode pcapng" -Force
         
         if (!(Test-Path $ClassPath\'shell\Convert to pcapng (pktmon)')) { (New-Item $ClassPath\'shell\Convert to pcapng (pktmon)' -Force).Name }
         if (!(Test-Path $ClassPath\'shell\Convert to pcapng (pktmon)\command')) { (New-Item $ClassPath\'shell\Convert to pcapng (pktmon)\command' -Force).Name }
-        Set-ItemProperty -Path $ClassPath\'shell\Convert to pcapng (pktmon)\command' -Name '(default)' -Value "PowerShell.exe -NoProfile -File `"$StubPath`" -Etl `"%1`" -Mode pktmonpcapng" -Force
+        Set-ItemProperty -Path $ClassPath\'shell\Convert to pcapng (pktmon)\command' -Name '(default)' -Value "$Global:PwshExec -NoProfile -File `"$StubPath`" -Etl `"%1`" -Mode pktmonpcapng" -Force
         
         if (!(Test-Path $ClassPath\'shell\Format (pktmon)')) { (New-Item $ClassPath\'shell\Format (pktmon)' -Force).Name }
         if (!(Test-Path $ClassPath\'shell\Format (pktmon)\command')) { (New-Item $ClassPath\'shell\Format (pktmon)\command' -Force).Name }
-        Set-ItemProperty -Path $ClassPath\'shell\Format (pktmon)\command' -Name '(default)' -Value "PowerShell.exe -NoProfile -File `"$StubPath`" -Etl `"%1`" -Mode pktmonformat" -Force
+        Set-ItemProperty -Path $ClassPath\'shell\Format (pktmon)\command' -Name '(default)' -Value "$Global:PwshExec -NoProfile -File `"$StubPath`" -Etl `"%1`" -Mode pktmonformat" -Force
     }
 }
 
@@ -341,6 +344,12 @@ function Write-Bin
 }
 
 ## START OF SCRIPT ##
+
+if ($Pwsh) {
+    $Global:PwshExec = 'pwsh.exe'
+} else {
+    $Global:PwshExec = 'PowerShell.exe'
+}
 
 if ($Deconfig)
 {
