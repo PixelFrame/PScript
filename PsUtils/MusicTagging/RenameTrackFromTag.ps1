@@ -1,7 +1,14 @@
-$TagLibSharpDll = Resolve-Path $PSScriptRoot\..\Bin\TagLibSharp.dll
+[CmdletBinding()]
+param (
+    [Parameter()]
+    [string]
+    $Path
+)
+
+$TagLibSharpDll = (Resolve-Path $PSScriptRoot\..\..\Bin\TagLibSharp.dll).ToString().Replace('Microsoft.PowerShell.Core\FileSystem::', '')
 [Reflection.Assembly]::LoadFrom($TagLibSharpDll)
 
-$Files = Get-ChildItem "C:\Users\pm421\OneDrive\Media\Music\Lossless\Shiro SAGISU Music from ''SHIN EVANGELION'' EVANGELION- 3.0 + 1.0\FLAC"
+$Files = Get-ChildItem $Path
 
 foreach ($File in $Files)
 {
@@ -13,7 +20,7 @@ foreach ($File in $Files)
 
     try
     {
-        Rename-Item -Path $File.FullName -NewName "$Disc.$Track $Title$Extension" -ErrorAction Stop
+        Rename-Item -Path $File.FullName -NewName "$Disc.$Track - $Title$Extension" -ErrorAction Stop
     }
     catch
     {
