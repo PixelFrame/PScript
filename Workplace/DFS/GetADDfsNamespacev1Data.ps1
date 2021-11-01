@@ -38,6 +38,7 @@ $PKTArr = @()
 foreach ($ObjNamespace in $ObjNamespaces)
 {
     $PKTObj = [PKT]::new($ObjNamespace.pKT)
+    $PKTObj.PrintTree()
     $PKTArr += $PKTObj
 }
 

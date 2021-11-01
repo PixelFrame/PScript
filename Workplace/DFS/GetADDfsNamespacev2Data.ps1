@@ -42,7 +42,7 @@ foreach ($ObjNamespace in $ObjNamespaces)
         CN      = $ObjNamespace.cn
         Prop    = $ObjNamespace.'msDFS-Propertiesv2';
         Targets = $Targets;
-        TTL     = $ObjNamespace.'msDFS-Ttlv2'
+        TTL     = $ObjNamespace.'msDFS-Ttlv2';
     }
 }
 
@@ -53,6 +53,7 @@ foreach ($Link in $Links)
     $Path = $Namespace + $Link.'msDFS-LinkPathv2'
     $Targets = [System.Text.Encoding]::Unicode.GetString($Link.'msDFS-TargetListv2')
     $ArrLink += [PSCustomObject] @{
+        CN      = $Link.cn;
         Path    = $Path;
         Prop    = $Link.'msDFS-Propertiesv2';
         Targets = $Targets;
