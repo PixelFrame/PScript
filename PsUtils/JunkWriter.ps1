@@ -10,7 +10,7 @@ param (
     $BottomSize = 100,
 
     [Parameter()]
-    [UInt32]
+    [Int32]
     $Number = 10,
 
     [Parameter()]
