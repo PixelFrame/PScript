@@ -131,6 +131,12 @@ function GetHexVal
     return $val;
 }
 
+function UpdateSelected {
+    param (
+    )
+    $label.Text = "Selected: $($textBox2.SelectionLength)";
+}
+
 [System.Windows.Forms.Application]::EnableVisualStyles()
 
 $Form = New-Object System.Windows.Forms.Form
@@ -144,6 +150,7 @@ $button1 = New-Object System.Windows.Forms.Button
 $button2 = New-Object System.Windows.Forms.Button
 $button3 = New-Object System.Windows.Forms.Button
 $checkBox = New-Object System.Windows.Forms.CheckBox
+$label = New-Object System.Windows.Forms.Label
 
 $Form.ClientSize = New-Object System.Drawing.Point(800, 450)
 $Form.Text = "HEX Converter"
@@ -165,17 +172,19 @@ $tableLayoutPanel1.RowStyles.Add((New-Object System.Windows.Forms.RowStyle -Argu
 $tableLayoutPanel1.RowStyles.Add((New-Object System.Windows.Forms.RowStyle -ArgumentList @([System.Windows.Forms.SizeType]::Absolute, 30)));
 $tableLayoutPanel1.Size = New-Object System.Drawing.Size -ArgumentList @(800, 450);
 
-$tableLayoutPanel2.ColumnCount = 4;
+$tableLayoutPanel2.ColumnCount = 5;
 $tableLayoutPanel2.ColumnStyles.Add((New-Object System.Windows.Forms.ColumnStyle -ArgumentList @([System.Windows.Forms.SizeType]::Absolute, 80)));
 $tableLayoutPanel2.ColumnStyles.Add((New-Object System.Windows.Forms.ColumnStyle -ArgumentList @([System.Windows.Forms.SizeType]::Absolute, 80)));
 $tableLayoutPanel2.ColumnStyles.Add((New-Object System.Windows.Forms.ColumnStyle -ArgumentList @([System.Windows.Forms.SizeType]::Absolute, 80)));
-$tableLayoutPanel2.ColumnStyles.Add((New-Object System.Windows.Forms.ColumnStyle -ArgumentList @([System.Windows.Forms.SizeType]::Absolute, 80)));
+$tableLayoutPanel2.ColumnStyles.Add((New-Object System.Windows.Forms.ColumnStyle -ArgumentList @([System.Windows.Forms.SizeType]::Absolute, 100)));
+$tableLayoutPanel2.ColumnStyles.Add((New-Object System.Windows.Forms.ColumnStyle -ArgumentList @([System.Windows.Forms.SizeType]::Absolute, 300)));
 $tableLayoutPanel2.RowCount = 1;
 $tableLayoutPanel2.RowStyles.Add((New-Object System.Windows.Forms.RowStyle -ArgumentList @([System.Windows.Forms.SizeType]::Percent, 100)));
 $tableLayoutPanel2.Controls.Add($button1, 0, 0);
 $tableLayoutPanel2.Controls.Add($button2, 1, 0);
 $tableLayoutPanel2.Controls.Add($button3, 2, 0);
 $tableLayoutPanel2.Controls.Add($checkBox, 3, 0);
+$tableLayoutPanel2.Controls.Add($label, 4, 0);
 $tableLayoutPanel2.Dock = [System.Windows.Forms.DockStyle]::Fill;
 $tableLayoutPanel2.Size = New-Object System.Drawing.Size -ArgumentList @(800, 30);
 $tableLayoutPanel2.Name = "tableLayoutPanel2";
@@ -210,36 +219,42 @@ $textBox2.Multiline = $true;
 $textBox2.Name = "textBox2";
 $textBox2.ReadOnly = $true;
 $textBox2.Size = New-Object System.Drawing.Size -ArgumentList @(788, 182);
-$textBox2.ScrollBars = [System.Windows.Forms.ScrollBars]::Both
-$textBox2.WordWrap = $false
+$textBox2.ScrollBars = [System.Windows.Forms.ScrollBars]::Both;
+$textBox2.WordWrap = $false;
 $textBox2.Font = New-Object System.Drawing.Font('Consolas', 10);
+$textBox2.HideSelection = $false;
+$textBox2.Add_Click( { UpdateSelected } );
 
 $button1.Location = New-Object System.Drawing.Point -ArgumentList @(3, 423);
 $button1.Name = "button1";
 $button1.Size = New-Object System.Drawing.Size -ArgumentList @(75, 23);
 $button1.Text = "ASCII";
 $button1.UseVisualStyleBackColor = $true;
-$button1.Add_Click( { onASCII })
+$button1.Add_Click( { onASCII });
 
 $button2.Location = New-Object System.Drawing.Point -ArgumentList @(81, 423);
 $button2.Name = "button2";
 $button2.Size = New-Object System.Drawing.Size -ArgumentList @(75, 23);
 $button2.Text = "UTF8";
 $button2.UseVisualStyleBackColor = $true;
-$button2.Add_Click( { onUTF8 })
+$button2.Add_Click( { onUTF8 });
 
 $button3.Location = New-Object System.Drawing.Point -ArgumentList @(159, 423);
 $button3.Name = "button3";
 $button3.Size = New-Object System.Drawing.Size -ArgumentList @(75, 23);
 $button3.Text = "Unicode";
 $button3.UseVisualStyleBackColor = $true;
-$button3.Add_Click( { onUnicode })
+$button3.Add_Click( { onUnicode });
 
 $checkBox.Name = "checkBox";
-$checkBox.Text = "Word Wrap"
+$checkBox.Text = "Word Wrap";
 $checkBox.Checked = $false;
 $checkBox.CheckState = [System.Windows.Forms.CheckState]::Unchecked;
-$checkBox.Add_Click( { onWordWarp } )
+$checkBox.Add_Click( { onWordWarp } );
+
+$label.Name = "label";
+$label.Text = "Selected: $($textBox2.SelectionLength)";
+$label.TextAlign = [System.Drawing.ContentAlignment]::MiddleLeft;
 
 $Form.Controls.AddRange(@($tableLayoutPanel1))
 
