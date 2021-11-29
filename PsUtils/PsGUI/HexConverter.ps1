@@ -1,3 +1,10 @@
+[CmdletBinding()]
+param (
+    [Parameter()]
+    [string]
+    $PKTPath = '..\..\Workplace\DFS\PKT.ps1'
+)
+
 Add-Type -AssemblyName System.Windows.Forms
 
 #REGION Widget Callbacks
@@ -24,68 +31,125 @@ function onUnicode
     $textBox2.Text = DoConvert 'Unicode' $HexString
 }
 
-function onDnsA
+function onDnsIP
 {
     $RegexPattern = New-Object regex '[\\\r\n\t, ]|0x'
     $HexString = $RegexPattern.Replace($textBox1.Text, '')
     $HexBytes = StringToByteArray($HexString)
 
-    if ($HexBytes.Count -ne 4)
+    if ($HexBytes.Count -eq 4)
     {
-        $Output = "Invalid Hex string"
+        $Output = DoDnsConvert -Type 1 -HexBytes $HexBytes
+    }
+    elseif ($HexBytes.Count -eq 16)
+    {
+        $Output = DoDnsConvert -Type 28 -HexBytes $HexBytes
     }
     else
     {
-        $Output = $HexBytes -join '.'
+        $Output = "Invalid HEX string"
     }
 
     $textBox2.Text = $Output
 }
 
-function onDnsPTR
+function onDnsNodeName
 {
     $RegexPattern = New-Object regex '[\\\r\n\t, ]|0x'
     $HexString = $RegexPattern.Replace($textBox1.Text, '')
     $HexBytes = StringToByteArray($HexString)
 
-    $FullLength = [int] $HexBytes[0]
-    $SegCount = [int] $HexBytes[1]
-    $Index = 2
-    $Output = @" 
-Length: $FullLength
-Segment Count: $SegCount
-Segments:
-"@
+    $textBox2.Text = DoDnsConvert -Type 12 -HexBytes $HexBytes
+}
 
-    while ($Index -lt $FullLength) 
+function onDnsNameString
+{
+    $RegexPattern = New-Object regex '[\\\r\n\t, ]|0x'
+    $HexString = $RegexPattern.Replace($textBox1.Text, '')
+    $HexBytes = StringToByteArray($HexString)
+
+    $textBox2.Text = DoDnsConvert -Type -1 -HexBytes $HexBytes
+}
+
+function onDnsSRV
+{
+    $RegexPattern = New-Object regex '[\\\r\n\t, ]|0x'
+    $HexString = $RegexPattern.Replace($textBox1.Text, '')
+    $HexBytes = StringToByteArray($HexString)
+
+    $textBox2.Text = DoDnsConvert -Type 33 -HexBytes $HexBytes
+}
+
+function onDnsSOA
+{
+    
+}
+
+function onDnsMX
+{
+
+}
+
+function onDnsTXT
+{
+
+}
+
+function onPKT
+{
+    $RegexPattern = New-Object regex '[\\\r\n\t, ]|0x'
+    $HexString = $RegexPattern.Replace($textBox1.Text, '')
+    $HexBytes = StringToByteArray($HexString)
+
+    try
     {
-        $SegLength = [int] $HexBytes[$Index]
-        $SegBytes = New-Object 'byte[]' -ArgumentList $SegLength
-        [Array]::Copy($HexBytes, $Index + 1, $SegBytes, 0, $SegLength)
-        $Seg = [System.Text.Encoding]::UTF8.GetString($SegBytes)
-        $Output += "`r`n  ($SegLength)$Seg"
-        $Index += ($SegLength + 1)
-        # Write-Host "[DBG] CURRENT INDEX $Index"
+        $PKTObj = [PKT]::new($HexBytes)
+        $textBox2.Text = $PKTObj.PrintTree() -join "`r`n"
     }
-
-    $textBox2.Text = $Output
+    catch
+    {
+        $textBox2.Text = 'Invalid HEX string'
+    }
 }
 
-function onDnsCNAME
+function onDnsRecord
 {
     $RegexPattern = New-Object regex '[\\\r\n\t, ]|0x'
     $HexString = $RegexPattern.Replace($textBox1.Text, '')
     $HexBytes = StringToByteArray($HexString)
 
-    $FullLength = [int] $HexBytes[0]
-    $NameBytes = New-Object 'byte[]' -ArgumentList $FullLength
-    [Array]::Copy($HexBytes, 1, $NameBytes, 0, $FullLength)
-    $Name = [System.Text.Encoding]::UTF8.GetString($NameBytes)
-    $Output = @" 
-Length: $FullLength
-Name: $Name
-"@
+    $DataLength = Convert-LEBytesToUInt16(Get-SubArray -Source $HexBytes -StartIndex 0 -Length 2)
+    $RecordType = Convert-LEBytesToUInt16(Get-SubArray -Source $HexBytes -StartIndex 2 -Length 2)
+    $Version = $HexBytes[4]
+    $Rank = $HexBytes[5]
+    $Flags = Convert-LEBytesToUInt16(Get-SubArray -Source $HexBytes -StartIndex 6 -Length 2)
+    $Serial = Convert-LEBytesToUInt32(Get-SubArray -Source $HexBytes -StartIndex 8 -Length 4)
+    $TTL = Convert-BEBytesToUInt32(Get-SubArray -Source $HexBytes -StartIndex 12 -Length 4)
+    $Reserved = Convert-LEBytesToUInt32(Get-SubArray -Source $HexBytes -StartIndex 16 -Length 4)
+    $Timestamp = Convert-LEBytesToUInt32(Get-SubArray -Source $HexBytes -StartIndex 20 -Length 4)
+    if ($Timestamp -eq 0) {
+        $TimestampString = 'Static'
+    } else {
+        $TimestampString = (Get-Date '01/01/1601 0:0:0').AddHours($Timestamp).ToString('MM/dd/yyyy hh:mm:ss tt')
+    }
 
+    $RecordBytes = Get-SubArray -Source $HexBytes -StartIndex 24 -Length $DataLength
+
+    $Output = @"
+Data Length: $DataLength
+Record Type: $([DnsTypes]$RecordType) ($RecordType)
+Version: $Version (Must be 5)
+Rank: $Rank (Usually 240)
+Flags: $Flags (Must be 0)
+Serial: $Serial
+TTL: $TTL
+Reserved: $Reserved (Must be 0)
+Timestamp: $TimestampString
+Data:
+
+
+"@
+    $Output += DoDnsConvert -Type $RecordType -HexBytes $RecordBytes
     $textBox2.Text = $Output
 }
 
@@ -101,6 +165,83 @@ function UpdateSelected
 #ENDREGION
 
 #REGION Auxiliary Functions
+function Get-SubArray
+{
+    param (
+        [byte[]] $Source,
+        [int] $StartIndex,
+        [int] $Length
+    )
+    
+    $Result = New-Object 'byte[]' -ArgumentList $Length
+    [Array]::Copy($Source, $StartIndex, $Result, 0, $Length);
+    return $Result
+}
+
+function Convert-BEBytesToUInt32
+{
+    param (
+        [byte[]] $Bytes
+    )
+    if ($Bytes.Length -gt 4)
+    {
+        throw 'Byte array too long!'
+    }
+    if ([BitConverter]::IsLittleEndian)
+    {
+        [Array]::Reverse($Bytes); 
+    }
+    return [BitConverter]::ToUInt32($Bytes, 0);
+}
+
+function Convert-BEBytesToUInt16
+{
+    param (
+        [byte[]] $Bytes
+    )
+    if ($Bytes.Length -gt 2)
+    {
+        throw 'Byte array too long!'
+    }
+    if ([BitConverter]::IsLittleEndian)
+    {
+        [Array]::Reverse($Bytes); 
+    }
+    return [BitConverter]::ToUInt16($Bytes, 0);
+}
+
+function Convert-LEBytesToUInt32
+{
+    param (
+        [byte[]] $Bytes
+    )
+    if ($Bytes.Length -gt 4)
+    {
+        throw 'Byte array too long!'
+    }
+    if (![BitConverter]::IsLittleEndian)
+    {
+        [Array]::Reverse($Bytes); 
+    }
+    return [BitConverter]::ToUInt32($Bytes, 0);
+}
+
+function Convert-LEBytesToUInt16
+{
+    param (
+        [byte[]] $Bytes
+    )
+    if ($Bytes.Length -gt 2)
+    {
+        throw 'Byte array too long!'
+    }
+    if (![BitConverter]::IsLittleEndian)
+    {
+        [Array]::Reverse($Bytes); 
+    }
+    return [BitConverter]::ToUInt16($Bytes, 0);
+}
+
 function SplitOnNull
 {
     [CmdletBinding()]
@@ -138,7 +279,6 @@ function SplitOnNull
 
 function DoConvert
 {
-    [CmdletBinding()]
     param (
         [Parameter()]
         [string]
@@ -202,6 +342,110 @@ function GetHexVal
     else { $val -= 87 }
     return $val;
 }
+
+function GetDnsNameSegments
+{
+    param (
+        [int] $Index,
+        [byte[]] $HexBytes,
+        [int] $FullLength
+    )
+    $Output = ''
+    while ($Index -lt $FullLength) 
+    {
+        $SegLength = [int] $HexBytes[$Index]
+        $SegBytes = New-Object 'byte[]' -ArgumentList $SegLength
+        [Array]::Copy($HexBytes, $Index + 1, $SegBytes, 0, $SegLength)
+        $Seg = [System.Text.Encoding]::UTF8.GetString($SegBytes)
+        $Output += "`r`n  ($SegLength)$Seg"
+        $Index += ($SegLength + 1)
+        # Write-Host "[DBG] CURRENT INDEX $Index"
+    }
+    return $Output
+}
+
+function DoDnsConvert
+{
+    param (
+        [Parameter()]
+        [int]
+        $Type,
+
+        [Parameter()]
+        [byte[]]
+        $HexBytes
+    )
+    
+    $Output = ''
+    switch ($Type)
+    {
+        1
+        { 
+            $Output = $HexBytes -join '.'
+        }
+        28
+        {
+            for ($i = 0; $i -lt 16; $i += 2)
+            {
+                $Output += ($HexBytes[$i].ToString('X2') + $HexBytes[$i + 1].ToString('X2'))
+                if ($i -ne 14)
+                {
+                    $Output += ':'
+                }
+            }
+            $ip = [System.Net.IPAddress]::Parse($Output)
+            $Output += ("`r`nCompressed: " + $ip.IPAddressToString)
+        }
+        { $_ -in 2, 5, 12, 39 }
+        {
+            $NameLength = [int] $HexBytes[0]
+            $SegCount = [int] $HexBytes[1]
+            $Index = 2
+            $Output = @" 
+Name Length: $NameLength
+Segment Count: $SegCount
+Segments:
+"@
+            $Output += GetDnsNameSegments $Index $HexBytes ($NameLength + 1)
+        }
+        -1
+        {
+            $FullLength = [int] $HexBytes[0]
+            $NameBytes = New-Object 'byte[]' -ArgumentList $FullLength
+            [Array]::Copy($HexBytes, 1, $NameBytes, 0, $FullLength)
+            $Name = [System.Text.Encoding]::UTF8.GetString($NameBytes)
+            $Output = @" 
+Length: $FullLength
+Name: $Name
+"@
+        }
+        33
+        {
+            $Priority = Convert-BEBytesToUInt16(Get-SubArray -Source $HexBytes -StartIndex 0 -Length 2)
+            $Weight = Convert-BEBytesToUInt16(Get-SubArray -Source $HexBytes -StartIndex 2 -Length 2)
+            $Port = Convert-BEBytesToUInt16(Get-SubArray -Source $HexBytes -StartIndex 4 -Length 2)
+            $NameLength = [int] $HexBytes[6]
+            $SegCount = [int] $HexBytes[7]
+            $Index = 8
+            $Output = @"
+Priority: $Priority
+Weight: $Weight
+Port: $Port
+Name Length: $NameLength
+Segment Count: $SegCount
+Segments:
+"@
+            $Output += GetDnsNameSegments $Index $HexBytes ($NameLength + 7)
+        }
+        #TODO SOA MX TXT 
+        Default
+        {
+            $Output = 'Parsing of this type is NOT implemented'
+        }
+    }
+    return $Output
+}
+
 #ENDREGION
 
 #REGION WinForm Design
@@ -217,60 +461,72 @@ $textBox2 = New-Object System.Windows.Forms.TextBox
 $buttonAscii = New-Object System.Windows.Forms.Button
 $buttonUtf8 = New-Object System.Windows.Forms.Button
 $buttonUnicode = New-Object System.Windows.Forms.Button
-$buttonDnsA = New-Object System.Windows.Forms.Button
-$buttonDnsPTR = New-Object System.Windows.Forms.Button
-$buttonDnsCNAME = New-Object System.Windows.Forms.Button
+$buttonDnsIP = New-Object System.Windows.Forms.Button
+$buttonDnsNodeName = New-Object System.Windows.Forms.Button
+$buttonDnsNameString = New-Object System.Windows.Forms.Button
+$buttonDnsSRV = New-Object System.Windows.Forms.Button
+$buttonDnsSOA = New-Object System.Windows.Forms.Button
+$buttonDnsMX = New-Object System.Windows.Forms.Button
+$buttonDnsTXT = New-Object System.Windows.Forms.Button
+$buttonPKT = New-Object System.Windows.Forms.Button
+$buttonDnsRecord = New-Object System.Windows.Forms.Button
 $checkBox = New-Object System.Windows.Forms.CheckBox
 $label = New-Object System.Windows.Forms.Label
 
-$Form.ClientSize = New-Object System.Drawing.Point(800, 450)
+$Form.ClientSize = New-Object System.Drawing.Point(1000, 600)
 $Form.Text = "HEX Converter"
 $Form.TopMost = $false
-$Form.FormBorderStyle = [System.Windows.Forms.FormBorderStyle]::FixedSingle
-$Form.MaximizeBox = $false
 
 $tableLayoutPanel1.ColumnCount = 1;
-$tableLayoutPanel1.ColumnStyles.Add((New-Object System.Windows.Forms.ColumnStyle -ArgumentList @([System.Windows.Forms.SizeType]::Percent, 100)));
-$tableLayoutPanel1.Controls.Add($groupBox2, 0, 1);
-$tableLayoutPanel1.Controls.Add($groupBox1, 0, 0);
-$tableLayoutPanel1.Controls.Add($tableLayoutPanel2, 0, 2);
+$tableLayoutPanel1.ColumnStyles.Add((New-Object System.Windows.Forms.ColumnStyle -ArgumentList @([System.Windows.Forms.SizeType]::Percent, 100))) | Out-Null
+$tableLayoutPanel1.Controls.Add($groupBox2, 0, 1) | Out-Null
+$tableLayoutPanel1.Controls.Add($groupBox1, 0, 0) | Out-Null
+$tableLayoutPanel1.Controls.Add($tableLayoutPanel2, 0, 2) | Out-Null
 $tableLayoutPanel1.Dock = [System.Windows.Forms.DockStyle]::Fill;
 $tableLayoutPanel1.Location = New-Object System.Drawing.Point -ArgumentList @(0, 0);
 $tableLayoutPanel1.Name = "tableLayoutPanel1";
 $tableLayoutPanel1.RowCount = 3;
-$tableLayoutPanel1.RowStyles.Add((New-Object System.Windows.Forms.RowStyle -ArgumentList @([System.Windows.Forms.SizeType]::Percent, 50)));
-$tableLayoutPanel1.RowStyles.Add((New-Object System.Windows.Forms.RowStyle -ArgumentList @([System.Windows.Forms.SizeType]::Percent, 50)));
-$tableLayoutPanel1.RowStyles.Add((New-Object System.Windows.Forms.RowStyle -ArgumentList @([System.Windows.Forms.SizeType]::Absolute, 70)));
-$tableLayoutPanel1.Size = New-Object System.Drawing.Size -ArgumentList @(800, 450);
+$tableLayoutPanel1.RowStyles.Add((New-Object System.Windows.Forms.RowStyle -ArgumentList @([System.Windows.Forms.SizeType]::Percent, 40))) | Out-Null
+$tableLayoutPanel1.RowStyles.Add((New-Object System.Windows.Forms.RowStyle -ArgumentList @([System.Windows.Forms.SizeType]::Percent, 40))) | Out-Null
+$tableLayoutPanel1.RowStyles.Add((New-Object System.Windows.Forms.RowStyle -ArgumentList @([System.Windows.Forms.SizeType]::Percent, 20))) | Out-Null
 
-$tableLayoutPanel2.ColumnCount = 5;
-$tableLayoutPanel2.ColumnStyles.Add((New-Object System.Windows.Forms.ColumnStyle -ArgumentList @([System.Windows.Forms.SizeType]::Absolute, 100)));
-$tableLayoutPanel2.ColumnStyles.Add((New-Object System.Windows.Forms.ColumnStyle -ArgumentList @([System.Windows.Forms.SizeType]::Absolute, 100)));
-$tableLayoutPanel2.ColumnStyles.Add((New-Object System.Windows.Forms.ColumnStyle -ArgumentList @([System.Windows.Forms.SizeType]::Absolute, 100)));
-$tableLayoutPanel2.ColumnStyles.Add((New-Object System.Windows.Forms.ColumnStyle -ArgumentList @([System.Windows.Forms.SizeType]::Absolute, 100)));
-$tableLayoutPanel2.ColumnStyles.Add((New-Object System.Windows.Forms.ColumnStyle -ArgumentList @([System.Windows.Forms.SizeType]::Absolute, 300)));
-$tableLayoutPanel2.RowCount = 2;
-$tableLayoutPanel2.RowStyles.Add((New-Object System.Windows.Forms.RowStyle -ArgumentList @([System.Windows.Forms.SizeType]::Percent, 50)));
-$tableLayoutPanel2.RowStyles.Add((New-Object System.Windows.Forms.RowStyle -ArgumentList @([System.Windows.Forms.SizeType]::Percent, 50)));
-$tableLayoutPanel2.Controls.Add($buttonAscii, 0, 0);
-$tableLayoutPanel2.Controls.Add($buttonUtf8, 1, 0);
-$tableLayoutPanel2.Controls.Add($buttonUnicode, 2, 0);
-$tableLayoutPanel2.Controls.Add($buttonDnsA, 0, 1);
-$tableLayoutPanel2.Controls.Add($buttonDnsPTR, 1, 1);
-$tableLayoutPanel2.Controls.Add($buttonDnsCNAME, 2, 1);
-$tableLayoutPanel2.Controls.Add($checkBox, 3, 0);
-$tableLayoutPanel2.Controls.Add($label, 4, 0);
+$tableLayoutPanel2.ColumnCount = 8;
+$tableLayoutPanel2.ColumnStyles.Add((New-Object System.Windows.Forms.ColumnStyle -ArgumentList @([System.Windows.Forms.SizeType]::Percent, 12.5))) | Out-Null
+$tableLayoutPanel2.ColumnStyles.Add((New-Object System.Windows.Forms.ColumnStyle -ArgumentList @([System.Windows.Forms.SizeType]::Percent, 12.5))) | Out-Null
+$tableLayoutPanel2.ColumnStyles.Add((New-Object System.Windows.Forms.ColumnStyle -ArgumentList @([System.Windows.Forms.SizeType]::Percent, 12.5))) | Out-Null
+$tableLayoutPanel2.ColumnStyles.Add((New-Object System.Windows.Forms.ColumnStyle -ArgumentList @([System.Windows.Forms.SizeType]::Percent, 12.5))) | Out-Null
+$tableLayoutPanel2.ColumnStyles.Add((New-Object System.Windows.Forms.ColumnStyle -ArgumentList @([System.Windows.Forms.SizeType]::Percent, 12.5))) | Out-Null
+$tableLayoutPanel2.ColumnStyles.Add((New-Object System.Windows.Forms.ColumnStyle -ArgumentList @([System.Windows.Forms.SizeType]::Percent, 12.5))) | Out-Null
+$tableLayoutPanel2.ColumnStyles.Add((New-Object System.Windows.Forms.ColumnStyle -ArgumentList @([System.Windows.Forms.SizeType]::Percent, 12.5))) | Out-Null
+$tableLayoutPanel2.ColumnStyles.Add((New-Object System.Windows.Forms.ColumnStyle -ArgumentList @([System.Windows.Forms.SizeType]::Percent, 12.5))) | Out-Null
+$tableLayoutPanel2.RowCount = 3;
+$tableLayoutPanel2.RowStyles.Add((New-Object System.Windows.Forms.RowStyle -ArgumentList @([System.Windows.Forms.SizeType]::Percent, 33))) | Out-Null
+$tableLayoutPanel2.RowStyles.Add((New-Object System.Windows.Forms.RowStyle -ArgumentList @([System.Windows.Forms.SizeType]::Percent, 33))) | Out-Null
+$tableLayoutPanel2.RowStyles.Add((New-Object System.Windows.Forms.RowStyle -ArgumentList @([System.Windows.Forms.SizeType]::Percent, 33))) | Out-Null
+$tableLayoutPanel2.Controls.Add($buttonAscii, 0, 0) | Out-Null
+$tableLayoutPanel2.Controls.Add($buttonUtf8, 1, 0) | Out-Null
+$tableLayoutPanel2.Controls.Add($buttonUnicode, 2, 0) | Out-Null
+$tableLayoutPanel2.Controls.Add($buttonDnsIP, 0, 1) | Out-Null
+$tableLayoutPanel2.Controls.Add($buttonDnsNodeName, 1, 1) | Out-Null
+$tableLayoutPanel2.Controls.Add($buttonDnsNameString, 2, 1) | Out-Null
+$tableLayoutPanel2.Controls.Add($buttonDnsSRV, 3, 1) | Out-Null
+$tableLayoutPanel2.Controls.Add($buttonDnsSOA, 4, 1) | Out-Null
+$tableLayoutPanel2.Controls.Add($buttonDnsMX, 5, 1) | Out-Null
+$tableLayoutPanel2.Controls.Add($buttonDnsTXT, 6, 1) | Out-Null
+$tableLayoutPanel2.Controls.Add($buttonPKT, 0, 2) | Out-Null
+$tableLayoutPanel2.Controls.Add($buttonDnsRecord, 1, 2) | Out-Null
+$tableLayoutPanel2.Controls.Add($checkBox, 7, 0) | Out-Null
+$tableLayoutPanel2.Controls.Add($label, 7, 1) | Out-Null
 $tableLayoutPanel2.Dock = [System.Windows.Forms.DockStyle]::Fill;
-$tableLayoutPanel2.Size = New-Object System.Drawing.Size -ArgumentList @(800, 30);
 $tableLayoutPanel2.Name = "tableLayoutPanel2";
 
-$groupBox1.Controls.Add($textBox1);
+$groupBox1.Controls.Add($textBox1) | Out-Null
 $groupBox1.Dock = [System.Windows.Forms.DockStyle]::Fill;
 $groupBox1.Name = "groupBox1";
 $groupBox1.TabStop = $false;
 $groupBox1.Text = "HEX";
 
-$groupBox2.Controls.Add($textBox2);
+$groupBox2.Controls.Add($textBox2) | Out-Null
 $groupBox2.Dock = [System.Windows.Forms.DockStyle]::Fill;
 $groupBox2.Name = "groupBox2";
 $groupBox2.TabStop = $false;
@@ -281,6 +537,7 @@ $textBox1.Multiline = $true;
 $textBox1.Name = "textBox1";
 $textBox1.ScrollBars = [System.Windows.Forms.ScrollBars]::Vertical;
 $textBox1.Font = New-Object System.Drawing.Font('Consolas', 10);
+$textBox1.TabIndex = 0
 
 $textBox2.Dock = [System.Windows.Forms.DockStyle]::Fill;
 $textBox2.Multiline = $true;
@@ -290,49 +547,98 @@ $textBox2.ScrollBars = [System.Windows.Forms.ScrollBars]::Both;
 $textBox2.WordWrap = $false;
 $textBox2.Font = New-Object System.Drawing.Font('Consolas', 10);
 $textBox2.HideSelection = $false;
-$textBox2.Add_Click( { UpdateSelected } );
+$textBox2.Add_Click( { UpdateSelected } ) | Out-Null
+$textBox2.TabStop = $false
 
 $buttonAscii.Dock = [System.Windows.Forms.DockStyle]::Fill;
 $buttonAscii.Name = "buttonAscii";
 $buttonAscii.Text = "ASCII";
 $buttonAscii.UseVisualStyleBackColor = $true;
-$buttonAscii.Add_Click( { onASCII });
+$buttonAscii.Add_Click( { onASCII }) | Out-Null
 
 $buttonUtf8.Dock = [System.Windows.Forms.DockStyle]::Fill;
 $buttonUtf8.Name = "buttonUtf8";
 $buttonUtf8.Text = "UTF8";
 $buttonUtf8.UseVisualStyleBackColor = $true;
-$buttonUtf8.Add_Click( { onUTF8 });
+$buttonUtf8.Add_Click( { onUTF8 }) | Out-Null
 
 $buttonUnicode.Dock = [System.Windows.Forms.DockStyle]::Fill;
 $buttonUnicode.Name = "buttonUnicode";
 $buttonUnicode.Text = "Unicode";
 $buttonUnicode.UseVisualStyleBackColor = $true;
-$buttonUnicode.Add_Click( { onUnicode });
+$buttonUnicode.Add_Click( { onUnicode }) | Out-Null
 
-$buttonDnsA.Dock = [System.Windows.Forms.DockStyle]::Fill;
-$buttonDnsA.Name = "buttonDnsA";
-$buttonDnsA.Text = "DNS A";
-$buttonDnsA.UseVisualStyleBackColor = $true;
-$buttonDnsA.Add_Click( { onDnsA });
+$buttonDnsIP.Dock = [System.Windows.Forms.DockStyle]::Fill;
+$buttonDnsIP.Name = "buttonDnsIP";
+$buttonDnsIP.Text = "A(1)/AAAA(28)";
+$buttonDnsIP.UseVisualStyleBackColor = $true;
+$buttonDnsIP.Add_Click( { onDnsIP }) | Out-Null
 
-$buttonDnsPTR.Dock = [System.Windows.Forms.DockStyle]::Fill;
-$buttonDnsPTR.Name = "buttonDnsPTR";
-$buttonDnsPTR.Text = "DNS PTR";
-$buttonDnsPTR.UseVisualStyleBackColor = $true;
-$buttonDnsPTR.Add_Click( { onDnsPTR });
+$buttonDnsNodeName.Dock = [System.Windows.Forms.DockStyle]::Fill;
+$buttonDnsNodeName.Name = "buttonDnsNodeName";
+$buttonDnsNodeName.Text = "Name(2,5,12,39)";
+$buttonDnsNodeName.UseVisualStyleBackColor = $true;
+$buttonDnsNodeName.Add_Click( { onDnsNodeName }) | Out-Null
 
-$buttonDnsCNAME.Dock = [System.Windows.Forms.DockStyle]::Fill;
-$buttonDnsCNAME.Name = "buttonDnsCNAME";
-$buttonDnsCNAME.Text = "DNS CNAME";
-$buttonDnsCNAME.UseVisualStyleBackColor = $true;
-$buttonDnsCNAME.Add_Click( { onDnsCNAME });
+$buttonDnsNameString.Dock = [System.Windows.Forms.DockStyle]::Fill;
+$buttonDnsNameString.Name = "buttonDnsNameString";
+$buttonDnsNameString.Text = "Name String(5)";
+$buttonDnsNameString.UseVisualStyleBackColor = $true;
+$buttonDnsNameString.Add_Click( { onDnsNameString }) | Out-Null
+
+$buttonDnsSRV.Dock = [System.Windows.Forms.DockStyle]::Fill;
+$buttonDnsSRV.Name = "buttonDnsSRV";
+$buttonDnsSRV.Text = "SRV(33)";
+$buttonDnsSRV.UseVisualStyleBackColor = $true;
+$buttonDnsSRV.Add_Click( { onDnsSRV }) | Out-Null
+
+$buttonDnsSOA.Dock = [System.Windows.Forms.DockStyle]::Fill;
+$buttonDnsSOA.Name = "buttonDnsSOA";
+$buttonDnsSOA.Text = "SOA(6)";
+$buttonDnsSOA.UseVisualStyleBackColor = $true;
+$buttonDnsSOA.Add_Click( { onDnsSOA }) | Out-Null
+$buttonDnsSOA.Enabled = $false
+
+$buttonDnsMX.Dock = [System.Windows.Forms.DockStyle]::Fill;
+$buttonDnsMX.Name = "buttonDnsMX";
+$buttonDnsMX.Text = "MX(15)";
+$buttonDnsMX.UseVisualStyleBackColor = $true;
+$buttonDnsMX.Add_Click( { onDnsMX }) | Out-Null
+$buttonDnsMX.Enabled = $false
+
+$buttonDnsTXT.Dock = [System.Windows.Forms.DockStyle]::Fill;
+$buttonDnsTXT.Name = "buttonDnsTXT";
+$buttonDnsTXT.Text = "TXT(16)";
+$buttonDnsTXT.UseVisualStyleBackColor = $true;
+$buttonDnsTXT.Add_Click( { onDnsTXT }) | Out-Null
+$buttonDnsTXT.Enabled = $false
+
+if (Test-Path $PKTPath)
+{
+    . $PKTPath
+}
+else
+{
+    Write-Host '[WARNING] Cannot find PKT.ps1. DFSN PKT conversion will not be available.' -ForegroundColor Yellow
+    $buttonPKT.Enabled = $false
+}
+$buttonPKT.Dock = [System.Windows.Forms.DockStyle]::Fill;
+$buttonPKT.Name = "buttonPKT";
+$buttonPKT.Text = "PKT";
+$buttonPKT.UseVisualStyleBackColor = $true;
+$buttonPKT.Add_Click( { onPKT }) | Out-Null
+
+$buttonDnsRecord.Dock = [System.Windows.Forms.DockStyle]::Fill;
+$buttonDnsRecord.Name = "buttonDnsRecord";
+$buttonDnsRecord.Text = "DNS Record";
+$buttonDnsRecord.UseVisualStyleBackColor = $true;
+$buttonDnsRecord.Add_Click( { onDnsRecord }) | Out-Null
 
 $checkBox.Name = "checkBox";
 $checkBox.Text = "Word Wrap";
 $checkBox.Checked = $false;
 $checkBox.CheckState = [System.Windows.Forms.CheckState]::Unchecked;
-$checkBox.Add_Click( { onWordWarp } );
+$checkBox.Add_Click( { onWordWarp } ) | Out-Null
 
 $label.Name = "label";
 $label.Text = "Selected: $($textBox2.SelectionLength)";
@@ -342,3 +648,55 @@ $Form.Controls.AddRange(@($tableLayoutPanel1))
 
 $Form.ShowDialog()
 #ENDREGION
+
+enum DnsTypes
+{
+    UNKNOWN
+    A = 1
+    NS = 2
+    CNAME = 5
+    SOA = 6
+    PTR = 12
+    HINFO = 13
+    MX = 15
+    TXT = 16
+    RP = 17
+    AFSDB = 18
+    SIG = 24
+    KEY = 25
+    AAAA = 28
+    LOC = 29
+    SRV = 33
+    NAPTR = 35
+    KX = 36
+    CERT = 37
+    DNAME = 39
+    APL = 42
+    DS = 43
+    SSHFP = 44
+    IPSECKEY = 45
+    RRSIG = 46
+    NSEC = 47
+    DNSKEY = 48
+    DHCID = 49
+    NSEC3 = 50
+    NSEC3PARAM = 51
+    TLSA = 52
+    SMIMEA = 53
+    HIP = 55
+    CDS = 59
+    CDNSKEY = 60
+    OPENPGPKEY = 61
+    CSYNC = 62
+    ZONEMD = 63
+    SVCB = 64
+    HTTPS = 65
+    EUI48 = 108
+    EUI64 = 109
+    TKEY = 249
+    TSIG = 250
+    URI = 256
+    CAA = 257
+    TA = 32768
+    DLV = 32769
+}
