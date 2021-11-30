@@ -13,14 +13,16 @@ function onASCII
     $RegexPattern = New-Object regex '[\\\r\n\t, ]|0x'
     $HexString = $RegexPattern.Replace($textBox1.Text, '')
     $HexString = SplitOnNull $HexString
-    $textBox2.Text = DoConvert 'ASCII' $HexString
+    $HexBytes = StringToByteArray($HexString)
+    $textBox2.Text = DoConvert 'ASCII' $HexBytes
 }
 function onUTF8
 {
     $RegexPattern = New-Object regex '[\\\r\n\t, ]|0x'
     $HexString = $RegexPattern.Replace($textBox1.Text, '')
     $HexString = SplitOnNull $HexString
-    $textBox2.Text = DoConvert 'UTF8' $HexString
+    $HexBytes = StringToByteArray($HexString)
+    $textBox2.Text = DoConvert 'UTF8' $HexBytes
 }
 
 function onUnicode
@@ -28,7 +30,8 @@ function onUnicode
     $RegexPattern = New-Object regex '[\\\r\n\t, ]|0x'
     $HexString = $RegexPattern.Replace($textBox1.Text, '')
     $HexString = SplitOnNull $HexString -Unicode
-    $textBox2.Text = DoConvert 'Unicode' $HexString
+    $HexBytes = StringToByteArray($HexString)
+    $textBox2.Text = DoConvert 'Unicode' $HexBytes
 }
 
 function onDnsIP
@@ -39,11 +42,11 @@ function onDnsIP
 
     if ($HexBytes.Count -eq 4)
     {
-        $Output = DoDnsConvert -Type 1 -HexBytes $HexBytes
+        $Output = DoDnsConvert -Type 1 -HexBytes $HexBytes -IsBigEndian $false
     }
     elseif ($HexBytes.Count -eq 16)
     {
-        $Output = DoDnsConvert -Type 28 -HexBytes $HexBytes
+        $Output = DoDnsConvert -Type 28 -HexBytes $HexBytes -IsBigEndian $false
     }
     else
     {
@@ -59,7 +62,7 @@ function onDnsNodeName
     $HexString = $RegexPattern.Replace($textBox1.Text, '')
     $HexBytes = StringToByteArray($HexString)
 
-    $textBox2.Text = DoDnsConvert -Type 12 -HexBytes $HexBytes
+    $textBox2.Text = DoDnsConvert -Type 12 -HexBytes $HexBytes -IsBigEndian $false
 }
 
 function onDnsNameString
@@ -68,7 +71,7 @@ function onDnsNameString
     $HexString = $RegexPattern.Replace($textBox1.Text, '')
     $HexBytes = StringToByteArray($HexString)
 
-    $textBox2.Text = DoDnsConvert -Type -1 -HexBytes $HexBytes
+    $textBox2.Text = DoDnsConvert -Type -1 -HexBytes $HexBytes -IsBigEndian $false
 }
 
 function onDnsSRV
@@ -77,22 +80,55 @@ function onDnsSRV
     $HexString = $RegexPattern.Replace($textBox1.Text, '')
     $HexBytes = StringToByteArray($HexString)
 
-    $textBox2.Text = DoDnsConvert -Type 33 -HexBytes $HexBytes
+    if ([System.Windows.Forms.Control]::ModifierKeys -eq 'Shift')
+    {
+        $textBox2.Text = DoDnsConvert -Type 33 -HexBytes $HexBytes -IsBigEndian $true
+    }
+    else
+    {
+        $textBox2.Text = DoDnsConvert -Type 33 -HexBytes $HexBytes -IsBigEndian $false
+    }
 }
 
 function onDnsSOA
 {
-    
+    $RegexPattern = New-Object regex '[\\\r\n\t, ]|0x'
+    $HexString = $RegexPattern.Replace($textBox1.Text, '')
+    $HexBytes = StringToByteArray($HexString)
+
+    if ([System.Windows.Forms.Control]::ModifierKeys -eq 'Shift')
+    {
+        $textBox2.Text = DoDnsConvert -Type 6 -HexBytes $HexBytes -IsBigEndian $true
+    }
+    else
+    {
+        $textBox2.Text = DoDnsConvert -Type 6 -HexBytes $HexBytes -IsBigEndian $false
+    }
 }
 
 function onDnsMX
 {
+    $RegexPattern = New-Object regex '[\\\r\n\t, ]|0x'
+    $HexString = $RegexPattern.Replace($textBox1.Text, '')
+    $HexBytes = StringToByteArray($HexString)
 
+    if ([System.Windows.Forms.Control]::ModifierKeys -eq 'Shift')
+    {
+        $textBox2.Text = DoDnsConvert -Type 13 -HexBytes $HexBytes -IsBigEndian $true
+    }
+    else
+    {
+        $textBox2.Text = DoDnsConvert -Type 15 -HexBytes $HexBytes -IsBigEndian $false
+    }
 }
 
 function onDnsTXT
 {
+    $RegexPattern = New-Object regex '[\\\r\n\t, ]|0x'
+    $HexString = $RegexPattern.Replace($textBox1.Text, '')
+    $HexBytes = StringToByteArray($HexString)
 
+    $textBox2.Text = DoDnsConvert -Type 16 -HexBytes $HexBytes -IsBigEndian $false
 }
 
 function onPKT
@@ -118,18 +154,21 @@ function onDnsRecord
     $HexString = $RegexPattern.Replace($textBox1.Text, '')
     $HexBytes = StringToByteArray($HexString)
 
-    $DataLength = Convert-LEBytesToUInt16(Get-SubArray -Source $HexBytes -StartIndex 0 -Length 2)
-    $RecordType = Convert-LEBytesToUInt16(Get-SubArray -Source $HexBytes -StartIndex 2 -Length 2)
+    $DataLength = Convert-BytesToUInt16 -Bytes (Get-SubArray -Source $HexBytes -StartIndex 0 -Length 2) -IsBigEndian $false
+    $RecordType = Convert-BytesToUInt16 -Bytes (Get-SubArray -Source $HexBytes -StartIndex 2 -Length 2) -IsBigEndian $false
     $Version = $HexBytes[4]
     $Rank = $HexBytes[5]
-    $Flags = Convert-LEBytesToUInt16(Get-SubArray -Source $HexBytes -StartIndex 6 -Length 2)
-    $Serial = Convert-LEBytesToUInt32(Get-SubArray -Source $HexBytes -StartIndex 8 -Length 4)
-    $TTL = Convert-BEBytesToUInt32(Get-SubArray -Source $HexBytes -StartIndex 12 -Length 4)
-    $Reserved = Convert-LEBytesToUInt32(Get-SubArray -Source $HexBytes -StartIndex 16 -Length 4)
-    $Timestamp = Convert-LEBytesToUInt32(Get-SubArray -Source $HexBytes -StartIndex 20 -Length 4)
-    if ($Timestamp -eq 0) {
+    $Flags = Convert-BytesToUInt16 -Bytes (Get-SubArray -Source $HexBytes -StartIndex 6 -Length 2) -IsBigEndian $false
+    $Serial = Convert-BytesToUInt32 -Bytes (Get-SubArray -Source $HexBytes -StartIndex 8 -Length 4) -IsBigEndian $false
+    $TTL = Convert-BytesToUInt32 -Bytes (Get-SubArray -Source $HexBytes -StartIndex 12 -Length 4) -IsBigEndian $true
+    $Reserved = Convert-BytesToUInt32(Get-SubArray -Source $HexBytes -StartIndex 16 -Length 4) -IsBigEndian $false
+    $Timestamp = Convert-BytesToUInt32(Get-SubArray -Source $HexBytes -StartIndex 20 -Length 4) -IsBigEndian $false
+    if ($Timestamp -eq 0)
+    {
         $TimestampString = 'Static'
-    } else {
+    }
+    else
+    {
         $TimestampString = (Get-Date '01/01/1601 0:0:0').AddHours($Timestamp).ToString('MM/dd/yyyy hh:mm:ss tt')
     }
 
@@ -149,7 +188,7 @@ Data:
 
 
 "@
-    $Output += DoDnsConvert -Type $RecordType -HexBytes $RecordBytes
+    $Output += DoDnsConvert -Type $RecordType -HexBytes $RecordBytes -IsBigEndian $true
     $textBox2.Text = $Output
 }
 
@@ -178,64 +217,34 @@ function Get-SubArray
     return $Result
 }
 
-function Convert-BEBytesToUInt32
+function Convert-BytesToUInt32
 {
     param (
-        [byte[]] $Bytes
+        [byte[]] $Bytes,
+        [bool] $IsBigEndian
     )
     if ($Bytes.Length -gt 4)
     {
         throw 'Byte array too long!'
     }
-    if ([BitConverter]::IsLittleEndian)
+    if ([BitConverter]::IsLittleEndian -and $IsBigEndian)
     {
         [Array]::Reverse($Bytes); 
     }
     return [BitConverter]::ToUInt32($Bytes, 0);
 }
 
-function Convert-BEBytesToUInt16
+function Convert-BytesToUInt16
 {
     param (
-        [byte[]] $Bytes
+        [byte[]] $Bytes,
+        [bool] $IsBigEndian
     )
     if ($Bytes.Length -gt 2)
     {
         throw 'Byte array too long!'
     }
-    if ([BitConverter]::IsLittleEndian)
-    {
-        [Array]::Reverse($Bytes); 
-    }
-    return [BitConverter]::ToUInt16($Bytes, 0);
-}
-
-function Convert-LEBytesToUInt32
-{
-    param (
-        [byte[]] $Bytes
-    )
-    if ($Bytes.Length -gt 4)
-    {
-        throw 'Byte array too long!'
-    }
-    if (![BitConverter]::IsLittleEndian)
-    {
-        [Array]::Reverse($Bytes); 
-    }
-    return [BitConverter]::ToUInt32($Bytes, 0);
-}
-
-function Convert-LEBytesToUInt16
-{
-    param (
-        [byte[]] $Bytes
-    )
-    if ($Bytes.Length -gt 2)
-    {
-        throw 'Byte array too long!'
-    }
-    if (![BitConverter]::IsLittleEndian)
+    if ([BitConverter]::IsLittleEndian -and $IsBigEndian)
     {
         [Array]::Reverse($Bytes); 
     }
@@ -280,16 +289,9 @@ function SplitOnNull
 function DoConvert
 {
     param (
-        [Parameter()]
-        [string]
-        $Encoding,
-
-        [Parameter()]
-        [string]
-        $HexString
+        [string] $Encoding,
+        [byte[]] $HexBytes
     )
-    # Write-Host "[DBG] $HexString"
-    $HexBytes = StringToByteArray($HexString)
     if ($null -eq $HexBytes)
     {
         return 'Invalid HEX string'
@@ -373,7 +375,11 @@ function DoDnsConvert
 
         [Parameter()]
         [byte[]]
-        $HexBytes
+        $HexBytes,
+
+        [Parameter()]
+        [bool]
+        $IsBigEndian
     )
     
     $Output = ''
@@ -421,23 +427,119 @@ Name: $Name
         }
         33
         {
-            $Priority = Convert-BEBytesToUInt16(Get-SubArray -Source $HexBytes -StartIndex 0 -Length 2)
-            $Weight = Convert-BEBytesToUInt16(Get-SubArray -Source $HexBytes -StartIndex 2 -Length 2)
-            $Port = Convert-BEBytesToUInt16(Get-SubArray -Source $HexBytes -StartIndex 4 -Length 2)
+            $Priority = Convert-BytesToUInt16 -Bytes (Get-SubArray -Source $HexBytes -StartIndex 0 -Length 2) -IsBigEndian $IsBigEndian
+            $Weight = Convert-BytesToUInt16 -Bytes (Get-SubArray -Source $HexBytes -StartIndex 2 -Length 2) -IsBigEndian $IsBigEndian
+            $Port = Convert-BytesToUInt16 -Bytes (Get-SubArray -Source $HexBytes -StartIndex 4 -Length 2) -IsBigEndian $IsBigEndian
             $NameLength = [int] $HexBytes[6]
             $SegCount = [int] $HexBytes[7]
             $Index = 8
-            $Output = @"
-Priority: $Priority
-Weight: $Weight
-Port: $Port
-Name Length: $NameLength
-Segment Count: $SegCount
+            if (!$IsBigEndian)
+            {
+                $Output = @"
+Priority:       $Priority
+Weight:         $Weight
+Port:           $Port
+Name Length:    $NameLength
+
+$(DoConvert -Encoding 'UTF8' -HexBytes (Get-SubArray -Source $HexBytes -StartIndex 7 -Length $NameLength))
+"@
+            }
+            else
+            {
+                $Output = @"
+Priority:       $Priority
+Weight:         $Weight
+Port:           $Port
+Name Length:    $NameLength
+Segment Count:  $SegCount
 Segments:
 "@
-            $Output += GetDnsNameSegments $Index $HexBytes ($NameLength + 7)
+                $Output += GetDnsNameSegments $Index $HexBytes ($NameLength + 7)
+            }
         }
-        #TODO SOA MX TXT 
+        6
+        {
+            $Serial = Convert-BytesToUInt32 -Bytes (Get-SubArray -Source $HexBytes -StartIndex 0 -Length 4) -IsBigEndian $IsBigEndian
+            $Refresh = Convert-BytesToUInt32 -Bytes (Get-SubArray -Source $HexBytes -StartIndex 4 -Length 4) -IsBigEndian $IsBigEndian
+            $Retry = Convert-BytesToUInt32 -Bytes (Get-SubArray -Source $HexBytes -StartIndex 8 -Length 4) -IsBigEndian $IsBigEndian
+            $Expire = Convert-BytesToUInt32 -Bytes (Get-SubArray -Source $HexBytes -StartIndex 12 -Length 4) -IsBigEndian $IsBigEndian
+            $DefaultTTL = Convert-BytesToUInt32 -Bytes (Get-SubArray -Source $HexBytes -StartIndex 16 -Length 4) -IsBigEndian $IsBigEndian
+            
+            if (!$IsBigEndian)
+            {
+                $LenPri = [int] $HexBytes[20]
+                $LenResp = [int] $HexBytes[21 + $LenPri]
+                $Output = @"
+Serial number:      $Serial
+Refresh interval:   $Refresh
+Retry interval:     $Retry
+Expires after:      $Expire
+Default TTL:        $DefaultTTL
+
+Primary Server:
+  Length: $LenPri
+  $(DoConvert -Encoding 'UTF8' -HexBytes (Get-SubArray -Source $HexBytes -StartIndex 21 -Length $LenPri))
+
+Responsible Person:
+  Length: $LenResp
+  $(DoConvert -Encoding 'UTF8' -HexBytes (Get-SubArray -Source $HexBytes -StartIndex (22+$LenPri) -Length $LenResp))
+"@
+            }
+            else
+            {
+                $LenPri = [int] $HexBytes[20]
+                $SegCountPri = [int] $HexBytes[21]
+                $LenResp = [int] $HexBytes[20 + $LenPri + 2]
+                $SegCountResp = [int] $HexBytes[20 + $LenPri + 3]
+                $Output = @"
+Serial number:      $Serial
+Refresh interval:   $Refresh
+Retry interval:     $Retry
+Expires after:      $Expire
+Default TTL:        $DefaultTTL
+
+Primary Server:
+  Length: $LenPri
+  Segment Count: $SegCountPri
+  $(GetDnsNameSegments 22 $HexBytes ($LenPri + 21))
+
+Responsible Person:
+  Length: $LenResp
+  Segment Count: $SegCountResp
+  $(GetDnsNameSegments (24 + $LenPri) $HexBytes ($LenResp + 23 + $LenPri))
+"@
+            }
+        }
+        { $_ -in 15, 18 }
+        {
+            $Preference = Convert-BytesToUInt16 -Bytes (Get-SubArray -Source $HexBytes -StartIndex 0 -Length 2) -IsBigEndian $IsBigEndian
+            $Length = [int] $HexBytes[2]
+            $SegCount = [int] $HexBytes[3]
+
+            if (!$IsBigEndian)
+            {
+                $Output = @"
+Preference:     $Preference
+Length:         $Length
+
+$(DoConvert -Encoding 'UTF8' -HexBytes (Get-SubArray -Source $HexBytes -StartIndex 3 -Length $Length))
+"@
+            }
+            else
+            {
+                $Output = @"
+Preference:     $Preference
+Length:         $Length
+Segment Count:  $SegCount
+$(GetDnsNameSegments 4 $HexBytes ($Length + 3))
+"@
+            }
+        }
+        { $_ -in 13, 16, 29 }
+        {
+            $Output = "Length: $($HexBytes[0])`r`n"
+            $Output += DoConvert -Encoding 'UTF8' -HexBytes (Get-SubArray -Source $HexBytes -StartIndex 1 -Length ($HexBytes.Length - 1))
+        }
         Default
         {
             $Output = 'Parsing of this type is NOT implemented'
@@ -597,21 +699,18 @@ $buttonDnsSOA.Name = "buttonDnsSOA";
 $buttonDnsSOA.Text = "SOA(6)";
 $buttonDnsSOA.UseVisualStyleBackColor = $true;
 $buttonDnsSOA.Add_Click( { onDnsSOA }) | Out-Null
-$buttonDnsSOA.Enabled = $false
 
 $buttonDnsMX.Dock = [System.Windows.Forms.DockStyle]::Fill;
 $buttonDnsMX.Name = "buttonDnsMX";
 $buttonDnsMX.Text = "MX(15)";
 $buttonDnsMX.UseVisualStyleBackColor = $true;
 $buttonDnsMX.Add_Click( { onDnsMX }) | Out-Null
-$buttonDnsMX.Enabled = $false
 
 $buttonDnsTXT.Dock = [System.Windows.Forms.DockStyle]::Fill;
 $buttonDnsTXT.Name = "buttonDnsTXT";
 $buttonDnsTXT.Text = "TXT(16)";
 $buttonDnsTXT.UseVisualStyleBackColor = $true;
 $buttonDnsTXT.Add_Click( { onDnsTXT }) | Out-Null
-$buttonDnsTXT.Enabled = $false
 
 if (Test-Path $PKTPath)
 {
