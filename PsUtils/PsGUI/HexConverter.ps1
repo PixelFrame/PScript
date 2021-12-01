@@ -191,6 +191,14 @@ Data:
     $textBox2.Text = $Output
 }
 
+function onProxySettings {
+    $RegexPattern = New-Object regex '[\\\r\n\t, ]|0x'
+    $HexString = $RegexPattern.Replace($textBox1.Text, '')
+    $HexBytes = StringToByteArray($HexString)
+    
+    $textBox2.Text = ConvertFrom-ProxySettingsBinary $HexBytes
+}
+
 function onWordWarp
 {
     $textBox2.WordWrap = $checkBox.Checked;
@@ -547,6 +555,107 @@ $(GetDnsNameSegments 4 $HexBytes ($Length + 3))
     return $Output
 }
 
+# Modified From PowerShell Module NetworkingDsc Version 9.0.0-preview0001
+# https://www.powershellgallery.com/packages/NetworkingDsc/9.0.0-preview0001/Content/DSCResources%5CDSC_ProxySettings%5CDSC_ProxySettings.psm1
+function ConvertFrom-ProxySettingsBinary
+{
+    param
+    (
+        [Parameter(Mandatory = $true)]
+        [System.Byte[]]
+        $ProxySettings
+    )
+
+    $Output = ''
+
+    if ($ProxySettings.Count -gt 0)
+    {
+        # Do a smoke test on the binary to check it looks valid
+        if ($ProxySettings[0] -ne 0x46)
+        {
+            return 'Invalid HEX string'
+        }
+
+        $ProxySettingVersion = Convert-BytesToUInt32 -Bytes (Get-SubArray -Source $ProxySettings -StartIndex 4 -Length 4) -IsBigEndian $false
+        $Output += "Proxy setting version: $ProxySettingVersion`r`n"
+
+        # Figure out the proxy settings that are enabled
+        $proxyBits = $ProxySettings[8]
+
+        if (($proxyBits -band 0x2) -gt 0)
+        {
+            $Output += "Manual Proxy: True`r`n"
+        }
+        else {
+            $Output += "Manual Proxy: False`r`n"
+        }
+
+        if (($proxyBits -band 0x4) -gt 0)
+        {
+            $Output += "Auto Configuration URL (PAC): True`r`n"
+        }
+        else {
+            $Output += "Auto Configuration URL (PAC): False`r`n"
+        }
+
+        if (($proxyBits -band 0x8) -gt 0)
+        {
+            $Output += "Auto Detection: True`r`n"
+        }
+        else
+        {
+            $Output += "Auto Detection: False`r`n"
+        }
+
+        $stringPointer = 12
+
+        # Extract the Proxy Server string
+        $proxyServer = ''
+        $stringLength = Convert-BytesToUInt32 -Bytes (Get-SubArray -Source $ProxySettings -StartIndex $stringPointer -Length 4) -IsBigEndian $false
+        $Output += "Proxy server string length: $stringLength`r`n"
+        $stringPointer += 4
+
+        if ($stringLength -gt 0)
+        {
+            $stringBytes = New-Object -TypeName Byte[] -ArgumentList $stringLength
+            $null = [System.Buffer]::BlockCopy($ProxySettings, $stringPointer, $stringBytes, 0, $stringLength)
+            $proxyServer = [System.Text.Encoding]::ASCII.GetString($stringBytes)
+            $Output += "Proxy server string: $proxyServer`r`n"
+            $stringPointer += $stringLength
+        }
+
+        # Extract the Proxy Server Exceptions string
+        $stringLength = Convert-BytesToUInt32 -Bytes (Get-SubArray -Source $ProxySettings -StartIndex $stringPointer -Length 4) -IsBigEndian $false
+        $Output += "Bypass list string length: $stringLength`r`n"
+        $stringPointer += 4
+
+        if ($stringLength -gt 0)
+        {
+            $stringBytes = New-Object -TypeName Byte[] -ArgumentList $stringLength
+            $null = [System.Buffer]::BlockCopy($ProxySettings, $stringPointer, $stringBytes, 0, $stringLength)
+            $proxyServerExceptionsString = [System.Text.Encoding]::ASCII.GetString($stringBytes)
+            $Output += "Bypass list string: $proxyServerExceptionsString`r`n"
+            $stringPointer += $stringLength
+        }
+
+        # Extract the Auto Config URL string
+        $autoConfigURL = ''
+        $stringLength = Convert-BytesToUInt32 -Bytes (Get-SubArray -Source $ProxySettings -StartIndex $stringPointer -Length 4) -IsBigEndian $false
+        $Output += "Auto Config URL string length: $stringLength`r`n"
+        $stringPointer += 4
+
+        if ($stringLength -gt 0)
+        {
+            $stringBytes = New-Object -TypeName Byte[] -ArgumentList $stringLength
+            $null = [System.Buffer]::BlockCopy($ProxySettings, $stringPointer, $stringBytes, 0, $stringLength)
+            $autoConfigURL = [System.Text.Encoding]::ASCII.GetString($stringBytes)
+            $Output += "Auto Config URL string: $autoConfigURL`r`n"
+            $stringPointer += $stringLength
+        }
+    }
+    return $Output
+}
+
 #ENDREGION
 
 #REGION WinForm Design
@@ -573,6 +682,7 @@ $buttonDnsMX = New-Object System.Windows.Forms.Button
 $buttonDnsTXT = New-Object System.Windows.Forms.Button
 $buttonPKT = New-Object System.Windows.Forms.Button
 $buttonDnsRecord = New-Object System.Windows.Forms.Button
+$buttonProxySettings = New-Object System.Windows.Forms.Button
 $buttonAbout = New-Object System.Windows.Forms.Button
 $checkBox = New-Object System.Windows.Forms.CheckBox
 $label = New-Object System.Windows.Forms.Label
@@ -620,6 +730,7 @@ $tableLayoutPanel2.Controls.Add($buttonDnsMX, 5, 1) | Out-Null
 $tableLayoutPanel2.Controls.Add($buttonDnsTXT, 6, 1) | Out-Null
 $tableLayoutPanel2.Controls.Add($buttonPKT, 0, 2) | Out-Null
 $tableLayoutPanel2.Controls.Add($buttonDnsRecord, 1, 2) | Out-Null
+$tableLayoutPanel2.Controls.Add($buttonProxySettings, 2, 2) | Out-Null
 $tableLayoutPanel2.Controls.Add($checkBox, 0, 3) | Out-Null
 $tableLayoutPanel2.Controls.Add($label, 1, 3) | Out-Null
 $tableLayoutPanel2.Controls.Add($buttonAbout, 7, 3) | Out-Null
@@ -736,6 +847,12 @@ $buttonDnsRecord.Name = "buttonDnsRecord";
 $buttonDnsRecord.Text = "DNS Record";
 $buttonDnsRecord.UseVisualStyleBackColor = $true;
 $buttonDnsRecord.Add_Click( { onDnsRecord }) | Out-Null
+
+$buttonProxySettings.Dock = [System.Windows.Forms.DockStyle]::Fill;
+$buttonProxySettings.Name = "buttonProxySettings";
+$buttonProxySettings.Text = "Proxy Settings";
+$buttonProxySettings.UseVisualStyleBackColor = $true;
+$buttonProxySettings.Add_Click( { onProxySettings }) | Out-Null
 
 $buttonAbout.Dock = [System.Windows.Forms.DockStyle]::Fill;
 $buttonAbout.Name = "buttonAbout";
