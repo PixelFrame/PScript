@@ -2,7 +2,7 @@
 param (
     [Parameter()]
     [string]
-    $PKTPath = '..\..\Workplace\DFS\PKT.ps1'
+    $PKTPath = '.\PKT.ps1'
 )
 
 Add-Type -AssemblyName System.Windows.Forms
@@ -175,17 +175,16 @@ function onDnsRecord
     $RecordBytes = Get-SubArray -Source $HexBytes -StartIndex 24 -Length $DataLength
 
     $Output = @"
-Data Length: $DataLength
-Record Type: $([DnsTypes]$RecordType) ($RecordType)
-Version: $Version (Must be 5)
-Rank: $Rank (Usually 240)
-Flags: $Flags (Must be 0)
-Serial: $Serial
-TTL: $TTL
-Reserved: $Reserved (Must be 0)
-Timestamp: $TimestampString
+Data Length:    $DataLength
+Record Type:    $([DnsTypes]$RecordType) ($RecordType)
+Version:        $Version (Must be 5)
+Rank:           $Rank (Usually 240)
+Flags:          $Flags (Must be 0)
+Serial:         $Serial
+TTL:            $TTL
+Reserved:       $Reserved (Must be 0)
+Timestamp:      $TimestampString
 Data:
-
 
 "@
     $Output += DoDnsConvert -Type $RecordType -HexBytes $RecordBytes -IsBigEndian $true
@@ -553,6 +552,8 @@ $(GetDnsNameSegments 4 $HexBytes ($Length + 3))
 #REGION WinForm Design
 [System.Windows.Forms.Application]::EnableVisualStyles()
 
+$Version = '1.0.0.0'
+
 $Form = New-Object System.Windows.Forms.Form
 $tableLayoutPanel1 = New-Object System.Windows.Forms.TableLayoutPanel
 $tableLayoutPanel2 = New-Object System.Windows.Forms.TableLayoutPanel
@@ -572,6 +573,7 @@ $buttonDnsMX = New-Object System.Windows.Forms.Button
 $buttonDnsTXT = New-Object System.Windows.Forms.Button
 $buttonPKT = New-Object System.Windows.Forms.Button
 $buttonDnsRecord = New-Object System.Windows.Forms.Button
+$buttonAbout = New-Object System.Windows.Forms.Button
 $checkBox = New-Object System.Windows.Forms.CheckBox
 $label = New-Object System.Windows.Forms.Label
 
@@ -602,9 +604,10 @@ $tableLayoutPanel2.ColumnStyles.Add((New-Object System.Windows.Forms.ColumnStyle
 $tableLayoutPanel2.ColumnStyles.Add((New-Object System.Windows.Forms.ColumnStyle -ArgumentList @([System.Windows.Forms.SizeType]::Percent, 12.5))) | Out-Null
 $tableLayoutPanel2.ColumnStyles.Add((New-Object System.Windows.Forms.ColumnStyle -ArgumentList @([System.Windows.Forms.SizeType]::Percent, 12.5))) | Out-Null
 $tableLayoutPanel2.RowCount = 3;
-$tableLayoutPanel2.RowStyles.Add((New-Object System.Windows.Forms.RowStyle -ArgumentList @([System.Windows.Forms.SizeType]::Percent, 33))) | Out-Null
-$tableLayoutPanel2.RowStyles.Add((New-Object System.Windows.Forms.RowStyle -ArgumentList @([System.Windows.Forms.SizeType]::Percent, 33))) | Out-Null
-$tableLayoutPanel2.RowStyles.Add((New-Object System.Windows.Forms.RowStyle -ArgumentList @([System.Windows.Forms.SizeType]::Percent, 33))) | Out-Null
+$tableLayoutPanel2.RowStyles.Add((New-Object System.Windows.Forms.RowStyle -ArgumentList @([System.Windows.Forms.SizeType]::Percent, 25))) | Out-Null
+$tableLayoutPanel2.RowStyles.Add((New-Object System.Windows.Forms.RowStyle -ArgumentList @([System.Windows.Forms.SizeType]::Percent, 25))) | Out-Null
+$tableLayoutPanel2.RowStyles.Add((New-Object System.Windows.Forms.RowStyle -ArgumentList @([System.Windows.Forms.SizeType]::Percent, 25))) | Out-Null
+$tableLayoutPanel2.RowStyles.Add((New-Object System.Windows.Forms.RowStyle -ArgumentList @([System.Windows.Forms.SizeType]::Percent, 25))) | Out-Null
 $tableLayoutPanel2.Controls.Add($buttonAscii, 0, 0) | Out-Null
 $tableLayoutPanel2.Controls.Add($buttonUtf8, 1, 0) | Out-Null
 $tableLayoutPanel2.Controls.Add($buttonUnicode, 2, 0) | Out-Null
@@ -617,8 +620,9 @@ $tableLayoutPanel2.Controls.Add($buttonDnsMX, 5, 1) | Out-Null
 $tableLayoutPanel2.Controls.Add($buttonDnsTXT, 6, 1) | Out-Null
 $tableLayoutPanel2.Controls.Add($buttonPKT, 0, 2) | Out-Null
 $tableLayoutPanel2.Controls.Add($buttonDnsRecord, 1, 2) | Out-Null
-$tableLayoutPanel2.Controls.Add($checkBox, 7, 0) | Out-Null
-$tableLayoutPanel2.Controls.Add($label, 7, 1) | Out-Null
+$tableLayoutPanel2.Controls.Add($checkBox, 0, 3) | Out-Null
+$tableLayoutPanel2.Controls.Add($label, 1, 3) | Out-Null
+$tableLayoutPanel2.Controls.Add($buttonAbout, 7, 3) | Out-Null
 $tableLayoutPanel2.Dock = [System.Windows.Forms.DockStyle]::Fill;
 $tableLayoutPanel2.Name = "tableLayoutPanel2";
 
@@ -733,6 +737,12 @@ $buttonDnsRecord.Text = "DNS Record";
 $buttonDnsRecord.UseVisualStyleBackColor = $true;
 $buttonDnsRecord.Add_Click( { onDnsRecord }) | Out-Null
 
+$buttonAbout.Dock = [System.Windows.Forms.DockStyle]::Fill;
+$buttonAbout.Name = "buttonAbout";
+$buttonAbout.Text = "About";
+$buttonAbout.UseVisualStyleBackColor = $true;
+$buttonAbout.Add_Click( { [System.Windows.Forms.MessageBox]::Show("HEX CONVERTER`r`nVersion: $Version`r`nWritten by PixelFrame`r`nEXE version created with PS2EXE", 'About') }) | Out-Null
+
 $checkBox.Name = "checkBox";
 $checkBox.Text = "Word Wrap";
 $checkBox.Checked = $false;
@@ -745,9 +755,10 @@ $label.TextAlign = [System.Drawing.ContentAlignment]::MiddleLeft;
 
 $Form.Controls.AddRange(@($tableLayoutPanel1))
 
-$Form.ShowDialog()
+$Form.ShowDialog() | Out-Null
 #ENDREGION
 
+#REGION Supporting Classes
 enum DnsTypes
 {
     UNKNOWN
@@ -799,3 +810,4 @@ enum DnsTypes
     TA = 32768
     DLV = 32769
 }
+#ENDREGION
