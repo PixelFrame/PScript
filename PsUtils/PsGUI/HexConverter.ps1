@@ -1,5 +1,9 @@
 [CmdletBinding()]
 param (
+    [Parameter(ValueFromPipeline)]
+    [string]
+    $InputString,
+
     [Parameter()]
     [string]
     $PKTPath = '.\PKT.ps1'
@@ -7,7 +11,7 @@ param (
 
 Add-Type -AssemblyName System.Windows.Forms
 
-#REGION Widget Callbacks
+#region Widget Callbacks
 function onASCII
 {
     $RegexPattern = New-Object regex '[\\\r\n\t, ]|0x'
@@ -208,9 +212,9 @@ function UpdateSelected
 {
     $label.Text = "Selected: $($textBox2.SelectionLength)";
 }
-#ENDREGION
+#endregion
 
-#REGION Auxiliary Functions
+#region Auxiliary Functions
 function Get-SubArray
 {
     param (
@@ -656,12 +660,12 @@ function ConvertFrom-ProxySettingsBinary
     return $Output
 }
 
-#ENDREGION
+#endregion
 
-#REGION WinForm Design
+#region WinForm Design
 [System.Windows.Forms.Application]::EnableVisualStyles()
 
-$Version = '1.0.0.0'
+$Version = '1.0.0.1'
 
 $Form = New-Object System.Windows.Forms.Form
 $tableLayoutPanel1 = New-Object System.Windows.Forms.TableLayoutPanel
@@ -754,6 +758,7 @@ $textBox1.Multiline = $true;
 $textBox1.Name = "textBox1";
 $textBox1.ScrollBars = [System.Windows.Forms.ScrollBars]::Vertical;
 $textBox1.Font = New-Object System.Drawing.Font('Consolas', 10);
+$textBox1.Text = $InputString
 $textBox1.TabIndex = 0
 
 $textBox2.Dock = [System.Windows.Forms.DockStyle]::Fill;
@@ -873,9 +878,9 @@ $label.TextAlign = [System.Drawing.ContentAlignment]::MiddleLeft;
 $Form.Controls.AddRange(@($tableLayoutPanel1))
 
 $Form.ShowDialog() | Out-Null
-#ENDREGION
+#endregion
 
-#REGION Supporting Classes
+#region Supporting Classes
 enum DnsTypes
 {
     UNKNOWN
@@ -927,4 +932,4 @@ enum DnsTypes
     TA = 32768
     DLV = 32769
 }
-#ENDREGION
+#endregion
