@@ -103,7 +103,7 @@ $ProfileXML =
         <Address>10.1.1.0</Address>
         <PrefixSize>24</PrefixSize>
     </Route>
-    <RegisterDns>true</RegisterDns>
+    <RegisterDNS>true</RegisterDNS>
     <DeviceTunnel>false</DeviceTunnel>
 </VPNProfile>
 '@

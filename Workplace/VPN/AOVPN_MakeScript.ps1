@@ -124,7 +124,7 @@ $PEAP_TLS_STRUCT = @"
                                 <EapType xmlns="http://www.microsoft.com/provisioning/MsPeapConnectionPropertiesV1">
                                     <ServerValidation>
                                         <DisableUserPromptForServerValidation>false</DisableUserPromptForServerValidation>
-                                        <ServerNames>$VpnServer</ServerNames>
+                                        <ServerNames>$VpnServer;$NpsServer</ServerNames>
                                         <TrustedRootCA>$RootCAHash</TrustedRootCA>
                                     </ServerValidation>
                                     <FastReconnect>true</FastReconnect>
