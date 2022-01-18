@@ -203,6 +203,15 @@ function onProxySettings {
     $textBox2.Text = ConvertFrom-ProxySettingsBinary $HexBytes
 }
 
+function onSD
+{
+    $RegexPattern = New-Object regex '[\\\r\n\t, ]|0x'
+    $HexString = $RegexPattern.Replace($textBox1.Text, '')
+    $HexBytes = StringToByteArray($HexString)
+    
+    $textBox2.Text = DoSdConvert $HexBytes
+}
+
 function onWordWarp
 {
     $textBox2.WordWrap = $checkBox.Checked;
@@ -559,6 +568,34 @@ $(GetDnsNameSegments 4 $HexBytes ($Length + 3))
     return $Output
 }
 
+function DoSdConvert
+{
+    param (
+    [Parameter()]
+        [byte[]]
+        $HexBytes
+    )
+
+    $result = Invoke-CimMethod -ClassName Win32_SecurityDescriptorHelper -MethodName BinarySDToSDDL -Namespace 'ROOT/cimv2' -Arguments @{
+        BinarySD = $HexBytes
+    }
+
+    #TODO: ConvertFrom-SddlString result is based on local machine domain and some SIDs are not available. Will implement SDDL printing function.
+    $SD = ConvertFrom-SddlString $result.SDDL -Type FileSystemRights
+
+    $Output = @"
+SDDL: $($result.SDDL)
+    
+Owner: $($SD.Owner)
+Group: $($SD.Group)
+DACL: 
+    $($SD.DiscretionaryAcl -join "`r`n    ")
+SACL:
+    $($SD.SystemAcl)
+"@
+    return $Output
+}
+
 # Modified From PowerShell Module NetworkingDsc Version 9.0.0-preview0001
 # https://www.powershellgallery.com/packages/NetworkingDsc/9.0.0-preview0001/Content/DSCResources%5CDSC_ProxySettings%5CDSC_ProxySettings.psm1
 function ConvertFrom-ProxySettingsBinary
@@ -687,6 +724,7 @@ $buttonDnsTXT = New-Object System.Windows.Forms.Button
 $buttonPKT = New-Object System.Windows.Forms.Button
 $buttonDnsRecord = New-Object System.Windows.Forms.Button
 $buttonProxySettings = New-Object System.Windows.Forms.Button
+$buttonSD = New-Object System.Windows.Forms.Button
 $buttonAbout = New-Object System.Windows.Forms.Button
 $checkBox = New-Object System.Windows.Forms.CheckBox
 $label = New-Object System.Windows.Forms.Label
@@ -735,6 +773,7 @@ $tableLayoutPanel2.Controls.Add($buttonDnsTXT, 6, 1) | Out-Null
 $tableLayoutPanel2.Controls.Add($buttonPKT, 0, 2) | Out-Null
 $tableLayoutPanel2.Controls.Add($buttonDnsRecord, 1, 2) | Out-Null
 $tableLayoutPanel2.Controls.Add($buttonProxySettings, 2, 2) | Out-Null
+$tableLayoutPanel2.Controls.Add($buttonSD, 3, 2) | Out-Null
 $tableLayoutPanel2.Controls.Add($checkBox, 0, 3) | Out-Null
 $tableLayoutPanel2.Controls.Add($label, 1, 3) | Out-Null
 $tableLayoutPanel2.Controls.Add($buttonAbout, 7, 3) | Out-Null
@@ -858,6 +897,12 @@ $buttonProxySettings.Name = "buttonProxySettings";
 $buttonProxySettings.Text = "Proxy Settings";
 $buttonProxySettings.UseVisualStyleBackColor = $true;
 $buttonProxySettings.Add_Click( { onProxySettings }) | Out-Null
+
+$buttonSD.Dock = [System.Windows.Forms.DockStyle]::Fill;
+$buttonSD.Name = "buttonSD";
+$buttonSD.Text = "Sec Descriptor";
+$buttonSD.UseVisualStyleBackColor = $true;
+$buttonSD.Add_Click( { onSD }) | Out-Null
 
 $buttonAbout.Dock = [System.Windows.Forms.DockStyle]::Fill;
 $buttonAbout.Name = "buttonAbout";
