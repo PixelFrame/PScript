@@ -1,15 +1,3 @@
-# PowerShell TCP Socket Test Script
-# by Liuyi Sun <v-liuysu@microsoft.com>
-
-# Parameters
-
-# [int] BackLogMax : Maximum TCP Server BackLog Number 
-# [int] CltMax : Maximum Client Socket Number
-# [int] LisPort: Port to be Listened
-
-# This script calls .NET Framework Socket API
-# Due to .NET Socket limitation, TCP backlog maximum value is 200.
-
 [CmdletBinding()]
 param (
     [int]

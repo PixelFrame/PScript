@@ -1,16 +1,3 @@
-# PowerShell TCP Port Test Script
-# by Liuyi Sun <v-liuysu@microsoft.com>
-
-# Parameters
-
-# [int] CltMax : Maximum Client Socket Number
-# [bool] SlowMode: Sleep when Sockets Connecting
-# [double] SlowModeInterval: Sleep Interval in Second
-# [string] RemoteIP: IPv4 Address to be Tested
-# [int] RemotePort: Port to be Tested
-
-# This script calls .NET Framework Socket API
-
 [CmdletBinding()]
 param (
     [int]
