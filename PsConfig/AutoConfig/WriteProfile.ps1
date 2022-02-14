@@ -47,20 +47,6 @@ $ProfileContent += @"
 . "$ProfilePath\Scripts\Functions.ps1"
 "@
 
-$ProfileContent += @'
-
-# Host Title
-$Host.UI.RawUI.WindowTitle = $env:USERDOMAIN + '\'
-if (([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator"))
-{
-    $Host.UI.RawUI.WindowTitle += 'Administrator: '
-}
-else
-{
-    $Host.UI.RawUI.WindowTitle += $env:USERNAME + ': '
-}
-'@
-
 if ($PSType -eq 'WindowsPowerShell')
 {
     $HostTitle = 'Windows PowerShell '
@@ -69,7 +55,20 @@ else
 {
     $HostTitle = 'PowerShell '
 }
-$ProfileContent += "`n" + '$Host.UI.RawUI.WindowTitle +=' + "'$HostTitle' + " + ' $PSVersionTable.PSVersion.ToString() + " @ " + [environment]::OSVersion.VersionString'
+
+$ProfileContent += @"
+
+# Host Title
+if (([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator"))
+{
+    `$Admin = '[Administrator] '
+}
+else
+{
+    `$Admin = ''
+}
+`$Host.UI.RawUI.WindowTitle = "`$Admin `$env:USERDOMAIN\`$(`$env:USERNAME): $HostTitle `$(`$PSVersionTable.PSVersion.ToString()) @ `$([environment]::OSVersion.VersionString)"
+"@
 
 $ProfileContent += @'
 
