@@ -197,4 +197,4 @@ else
 
 Pause
 
-Invoke-WebRequest -Uri "$Binding/quit" | Out-Null
+Invoke-WebRequest -Uri ($Binding + 'quit') | Out-Null
