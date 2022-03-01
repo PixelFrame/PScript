@@ -14,16 +14,14 @@ Add-Type -AssemblyName System.Windows.Forms
 #region Widget Callbacks
 function onASCII
 {
-    $RegexPattern = New-Object regex '[\\\r\n\t, ]|0x'
-    $HexString = $RegexPattern.Replace($textBox1.Text, '')
+    $HexString = GetDeNoisedHex
     $HexString = SplitOnNull $HexString
     $HexBytes = StringToByteArray($HexString)
     $textBox2.Text = DoConvert 'ASCII' $HexBytes
 }
 function onUTF8
 {
-    $RegexPattern = New-Object regex '[\\\r\n\t, ]|0x'
-    $HexString = $RegexPattern.Replace($textBox1.Text, '')
+    $HexString = GetDeNoisedHex
     $HexString = SplitOnNull $HexString
     $HexBytes = StringToByteArray($HexString)
     $textBox2.Text = DoConvert 'UTF8' $HexBytes
@@ -31,17 +29,23 @@ function onUTF8
 
 function onUnicode
 {
-    $RegexPattern = New-Object regex '[\\\r\n\t, ]|0x'
-    $HexString = $RegexPattern.Replace($textBox1.Text, '')
+    $HexString = GetDeNoisedHex
     $HexString = SplitOnNull $HexString -Unicode
     $HexBytes = StringToByteArray($HexString)
     $textBox2.Text = DoConvert 'Unicode' $HexBytes
 }
 
+function onHexDump
+{
+    $HexString = GetDeNoisedHex
+    $ShowDecoded = $true
+    if ([System.Windows.Forms.Control]::ModifierKeys -eq 'Shift') { $ShowDecoded = $false }
+    $textBox2.Text = DoHexDump $HexString $ShowDecoded
+}
+
 function onDnsIP
 {
-    $RegexPattern = New-Object regex '[\\\r\n\t, ]|0x'
-    $HexString = $RegexPattern.Replace($textBox1.Text, '')
+    $HexString = GetDeNoisedHex
     $HexBytes = StringToByteArray($HexString)
 
     if ($HexBytes.Count -eq 4)
@@ -62,8 +66,7 @@ function onDnsIP
 
 function onDnsNodeName
 {
-    $RegexPattern = New-Object regex '[\\\r\n\t, ]|0x'
-    $HexString = $RegexPattern.Replace($textBox1.Text, '')
+    $HexString = GetDeNoisedHex
     $HexBytes = StringToByteArray($HexString)
 
     $textBox2.Text = DoDnsConvert -Type 12 -HexBytes $HexBytes -IsBigEndian $false
@@ -71,8 +74,7 @@ function onDnsNodeName
 
 function onDnsNameString
 {
-    $RegexPattern = New-Object regex '[\\\r\n\t, ]|0x'
-    $HexString = $RegexPattern.Replace($textBox1.Text, '')
+    $HexString = GetDeNoisedHex
     $HexBytes = StringToByteArray($HexString)
 
     $textBox2.Text = DoDnsConvert -Type -1 -HexBytes $HexBytes -IsBigEndian $false
@@ -80,8 +82,7 @@ function onDnsNameString
 
 function onDnsSRV
 {
-    $RegexPattern = New-Object regex '[\\\r\n\t, ]|0x'
-    $HexString = $RegexPattern.Replace($textBox1.Text, '')
+    $HexString = GetDeNoisedHex
     $HexBytes = StringToByteArray($HexString)
 
     if ([System.Windows.Forms.Control]::ModifierKeys -eq 'Shift')
@@ -96,8 +97,7 @@ function onDnsSRV
 
 function onDnsSOA
 {
-    $RegexPattern = New-Object regex '[\\\r\n\t, ]|0x'
-    $HexString = $RegexPattern.Replace($textBox1.Text, '')
+    $HexString = GetDeNoisedHex
     $HexBytes = StringToByteArray($HexString)
 
     if ([System.Windows.Forms.Control]::ModifierKeys -eq 'Shift')
@@ -112,8 +112,7 @@ function onDnsSOA
 
 function onDnsMX
 {
-    $RegexPattern = New-Object regex '[\\\r\n\t, ]|0x'
-    $HexString = $RegexPattern.Replace($textBox1.Text, '')
+    $HexString = GetDeNoisedHex
     $HexBytes = StringToByteArray($HexString)
 
     if ([System.Windows.Forms.Control]::ModifierKeys -eq 'Shift')
@@ -128,8 +127,7 @@ function onDnsMX
 
 function onDnsTXT
 {
-    $RegexPattern = New-Object regex '[\\\r\n\t, ]|0x'
-    $HexString = $RegexPattern.Replace($textBox1.Text, '')
+    $HexString = GetDeNoisedHex
     $HexBytes = StringToByteArray($HexString)
 
     $textBox2.Text = DoDnsConvert -Type 16 -HexBytes $HexBytes -IsBigEndian $false
@@ -137,8 +135,7 @@ function onDnsTXT
 
 function onPKT
 {
-    $RegexPattern = New-Object regex '[\\\r\n\t, ]|0x'
-    $HexString = $RegexPattern.Replace($textBox1.Text, '')
+    $HexString = GetDeNoisedHex
     $HexBytes = StringToByteArray($HexString)
 
     try
@@ -154,8 +151,7 @@ function onPKT
 
 function onDnsRecord
 {
-    $RegexPattern = New-Object regex '[\\\r\n\t, ]|0x'
-    $HexString = $RegexPattern.Replace($textBox1.Text, '')
+    $HexString = GetDeNoisedHex
     $HexBytes = StringToByteArray($HexString)
 
     $DataLength = Convert-BytesToUInt16 -Bytes (Get-SubArray -Source $HexBytes -StartIndex 0 -Length 2) -IsBigEndian $false
@@ -196,8 +192,7 @@ Data:
 }
 
 function onProxySettings {
-    $RegexPattern = New-Object regex '[\\\r\n\t, ]|0x'
-    $HexString = $RegexPattern.Replace($textBox1.Text, '')
+    $HexString = GetDeNoisedHex
     $HexBytes = StringToByteArray($HexString)
     
     $textBox2.Text = ConvertFrom-ProxySettingsBinary $HexBytes
@@ -205,8 +200,7 @@ function onProxySettings {
 
 function onSD
 {
-    $RegexPattern = New-Object regex '[\\\r\n\t, ]|0x'
-    $HexString = $RegexPattern.Replace($textBox1.Text, '')
+    $HexString = GetDeNoisedHex
     $HexBytes = StringToByteArray($HexString)
     
     $textBox2.Text = DoSdConvert $HexBytes
@@ -224,6 +218,12 @@ function UpdateSelected
 #endregion
 
 #region Auxiliary Functions
+function GetDeNoisedHex {
+    $RegexDeNoise = New-Object regex '[\\\r\n\t, -]|0x'
+    $HexString = $RegexDeNoise.Replace($textBox1.Text, '')
+    return $HexString
+}
+
 function Get-SubArray
 {
     param (
@@ -706,12 +706,61 @@ function ConvertFrom-ProxySettingsBinary
     return $Output
 }
 
+function DoHexDump {
+    param (
+        [string] $RawHexString,
+        [bool] $ShowDecoded
+    )
+
+    if ($RawHexString.Length % 2) { $RawHexString = '0' + $RawHexString }
+    $ByteCount = $RawHexString.Length -shr 1
+    $Offset = 0
+    $Result = ''
+    $Step = 0x20
+    $RegexInsertSpaces = New-Object Regex '..'
+
+    while ($ByteCount -gt 0)
+    {
+        if ($ByteCount -lt $Step)
+        {
+            $__ = $RawHexString.Substring($Offset * 2)
+            $Padding = ' ' * (($Step - $ByteCount) * 3)
+        }
+        else
+        {
+            $__ = $RawHexString.Substring($Offset * 2, $Step * 2)
+            $Padding = ''
+        }
+        $__ = $RegexInsertSpaces.Replace($__, '$0 ').TrimEnd()
+        $DecodedSection = ''
+        if ($ShowDecoded)
+        {
+            $DecodedSection = '  '
+            $__.Split(' ') | ForEach-Object {
+                $Decoded = [Convert]::ToUInt32($_, 16)
+                if (($Decoded -lt 0x20) -or ($Decoded -gt 0x7e -and $Decoded -lt 0xA0))
+                {
+                    $DecodedSection += '.'
+                }
+                else
+                {
+                    $DecodedSection += [char] $Decoded
+                }
+            }
+        }
+        $Result += "$($Offset.ToString('X8'))  $__$Padding$DecodedSection`r`n"
+        $Offset += $Step
+        $ByteCount -= $Step
+    }
+    return $Result
+}
+
 #endregion
 
 #region WinForm Design
 [System.Windows.Forms.Application]::EnableVisualStyles()
 
-$Version = '1.0.0.1'
+$Version = '1.0.0.3'
 
 $Form = New-Object System.Windows.Forms.Form
 $tableLayoutPanel1 = New-Object System.Windows.Forms.TableLayoutPanel
@@ -723,6 +772,7 @@ $textBox2 = New-Object System.Windows.Forms.TextBox
 $buttonAscii = New-Object System.Windows.Forms.Button
 $buttonUtf8 = New-Object System.Windows.Forms.Button
 $buttonUnicode = New-Object System.Windows.Forms.Button
+$buttonHexDump = New-Object System.Windows.Forms.Button
 $buttonDnsIP = New-Object System.Windows.Forms.Button
 $buttonDnsNodeName = New-Object System.Windows.Forms.Button
 $buttonDnsNameString = New-Object System.Windows.Forms.Button
@@ -772,6 +822,7 @@ $tableLayoutPanel2.RowStyles.Add((New-Object System.Windows.Forms.RowStyle -Argu
 $tableLayoutPanel2.Controls.Add($buttonAscii, 0, 0) | Out-Null
 $tableLayoutPanel2.Controls.Add($buttonUtf8, 1, 0) | Out-Null
 $tableLayoutPanel2.Controls.Add($buttonUnicode, 2, 0) | Out-Null
+$tableLayoutPanel2.Controls.Add($buttonHexDump, 3, 0) | Out-Null
 $tableLayoutPanel2.Controls.Add($buttonDnsIP, 0, 1) | Out-Null
 $tableLayoutPanel2.Controls.Add($buttonDnsNodeName, 1, 1) | Out-Null
 $tableLayoutPanel2.Controls.Add($buttonDnsNameString, 2, 1) | Out-Null
@@ -837,6 +888,12 @@ $buttonUnicode.Name = "buttonUnicode";
 $buttonUnicode.Text = "Unicode";
 $buttonUnicode.UseVisualStyleBackColor = $true;
 $buttonUnicode.Add_Click( { onUnicode }) | Out-Null
+
+$buttonHexDump.Dock = [System.Windows.Forms.DockStyle]::Fill;
+$buttonHexDump.Name = "buttonHexDump";
+$buttonHexDump.Text = "Hex Dump";
+$buttonHexDump.UseVisualStyleBackColor = $true;
+$buttonHexDump.Add_Click( { onHexDump }) | Out-Null
 
 $buttonDnsIP.Dock = [System.Windows.Forms.DockStyle]::Fill;
 $buttonDnsIP.Name = "buttonDnsIP";
