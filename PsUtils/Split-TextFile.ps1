@@ -15,7 +15,11 @@ param (
     [Parameter(ParameterSetName = 'Size')]
     [ValidateSet('Loose', 'Strict')]
     [string]
-    $SizeMode = 'Loose'
+    $SizeMode = 'Loose',
+
+    [Parameter()]
+    [switch]
+    $KeepCsvHeader
 )
 
 try
@@ -37,8 +41,14 @@ try
     $Writer = New-Object System.IO.StreamWriter -ArgumentList $CurrentFile
     $Line = ''
     $LineCounter = 1
+    if ($KeepCsvHeader)
+    {
+        $CsvHeader = $Reader.ReadLine()
+        $Writer.WriteLine($CsvHeader)
+    }
     
-    if ($PSCmdlet.ParameterSetName -eq 'Line') {
+    if ($PSCmdlet.ParameterSetName -eq 'Line')
+    {
         while ($null -ne ($Line = $Reader.ReadLine()))
         {
             if ($LineCounter -gt $LineLimit)
@@ -48,14 +58,18 @@ try
                 $FileCounter++
                 $CurrentFile = '{0}\{1}_Split{2}{3}' -f $SourceFile.Directory.FullName, $SourceFile.BaseName, $FileCounter, $SourceFile.Extension
                 $Writer = New-Object System.IO.StreamWriter -ArgumentList $CurrentFile
+                $Writer.WriteLine($CsvHeader)
             }
             $Writer.WriteLine($Line)
             $LineCounter++
         }
-    } else {        
+    }
+    else
+    {        
         while ($null -ne ($Line = $Reader.ReadLine()))
         {
-            if (($SizeMode -eq 'Loose' -and $LineCounter -eq 10000) -or ($SizeMode -eq 'Strict')) {
+            if (($SizeMode -eq 'Loose' -and $LineCounter -eq 10000) -or ($SizeMode -eq 'Strict'))
+            {
                 $Writer.Flush()
             }
             if ($Writer.BaseStream.Length -gt $SizeLimit)
@@ -65,6 +79,7 @@ try
                 $FileCounter++
                 $CurrentFile = '{0}\{1}_Split{2}{3}' -f $SourceFile.Directory.FullName, $SourceFile.BaseName, $FileCounter, $SourceFile.Extension
                 $Writer = New-Object System.IO.StreamWriter -ArgumentList $CurrentFile
+                $Writer.WriteLine($CsvHeader)
             }
             $Writer.WriteLine($Line)
             $LineCounter++
