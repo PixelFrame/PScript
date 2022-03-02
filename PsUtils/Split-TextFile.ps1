@@ -2,7 +2,7 @@
 param (
     [Parameter()]
     [string]
-    $Source = "D:\TraceLab\VPNSRV\minio_netio-!FMT.txt",
+    $Source,
 
     [Parameter(ParameterSetName = 'Line')]
     [UInt32]
@@ -33,7 +33,7 @@ try
 {
     $Reader = New-Object System.IO.StreamReader -ArgumentList $SourceFile.FullName
     $FileCounter = 0
-    $CurrentFile = '{0}\{1}_Split{2}{3}' -f $SourceFile.Directory.FullName, $SourceFile.BaseName, $FileCounter, $SourceFile.Extension
+    $CurrentFile = '{0}\{1}_Split{2}{3}' -f $SourceFile.DirectoryName, $SourceFile.BaseName, $FileCounter, $SourceFile.Extension
     $Writer = New-Object System.IO.StreamWriter -ArgumentList $CurrentFile
     $Line = ''
     $LineCounter = 1
@@ -76,5 +76,9 @@ finally
     if ($null -ne $Writer)
     {
         $Writer.Close()
+    }
+    if ($null -ne $Reader)
+    {
+        $Reader.Close()
     }
 }
