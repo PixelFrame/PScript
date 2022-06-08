@@ -3,6 +3,7 @@ param (
     [Parameter(Mandatory = $true)][string] $ZoneName,
     [Parameter(Mandatory = $true)][string] $TimeBefore,
     [Parameter()][string] $ZoneScope,
+    [Parameter()][string] $RRType = "A",
     [Parameter()][string] $ComputerName = "localhost",
     [switch] $ConfirmEveryRecord
 )
@@ -11,7 +12,7 @@ if ($ZoneScope -eq "")
 {
     $ZoneScope = $ZoneName
 }
-$Records = Get-DnsServerResourceRecord -ZoneName $ZoneName -RRType A -ComputerName $ComputerName -ZoneScope $ZoneScope | Where-Object {
+$Records = Get-DnsServerResourceRecord -ZoneName $ZoneName -RRType $RRType -ComputerName $ComputerName -ZoneScope $ZoneScope | Where-Object {
     ($_.Timestamp -lt (Get-Date $TimeBefore)) -and 
     ($_.Timestamp -ne $null)
 }
