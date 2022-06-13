@@ -1,6 +1,8 @@
 [CmdletBinding()]
 param (
-    [Parameter()] [string] $Path = $PSScriptRoot
+    [Parameter()] [string] $Path = $PSScriptRoot,
+    [switch] $FileProp,
+    [switch] $DirProp
 )
 
 $Script:IndentFileNosub = '    '
@@ -11,13 +13,13 @@ $Script:IndentDirMid = '├───'
 function GenerateTree
 {
     param (
-        [ref] $BuilderRef,
         [string] $CurrentDir,
         [string] $Indent = '',
         [int] $DirType = 0
     )
     
-    $CurrentDirName = (Get-Item $CurrentDir).Name
+    $CurrentDir = $CurrentDir.Replace('[', '`[').Replace(']', '`]')
+    $CurrentDirObj = Get-Item $CurrentDir -Force
     $SubFiles = Get-ChildItem $CurrentDir -File -Force
     $SubDirs = Get-ChildItem $CurrentDir -Directory -Force
     
@@ -28,16 +30,19 @@ function GenerateTree
         2 { $IndentDir = $Script:IndentDirLast; $IndentNext = $Script:IndentFileNosub }
         Default {}
     }
-    $BuilderRef.Value.AppendLine($Indent + $IndentDir + $CurrentDirName) | Out-Null
+    if ($DirProp) { Write-Output ($Indent + $IndentDir + $CurrentDirObj.Name + " | $($CurrentDirObj.Mode) | $($CurrentDirObj.CreationTimeUtc) | $($CurrentDirObj.LastWriteTimeUtc)") }
+    else
+    { Write-Output ($Indent + $IndentDir + $CurrentDirObj.Name) }
     if ($SubDirs.Count -gt 0) { $IndentFile = $IndentNext + $Script:IndentFileSub }
     else { $IndentFile = $IndentNext + $Script:IndentFileNosub }
     if ($SubFiles.Count -gt 0)
     {
         foreach ($SubFile in $SubFiles)
         {
-            $BuilderRef.Value.AppendLine($Indent + $IndentFile + $SubFile.Name + " | $($SubFile.Mode) | $($SubFile.LastWriteTimeUtc)") | Out-Null
+            if ($FileProp) { Write-Output ($Indent + $IndentFile + $SubFile.Name + " | $($SubFile.Length) | $($SubFile.Mode)  | $($SubFile.CreationTimeUtc) | $($SubFile.LastWriteTimeUtc)") }
+            else { Write-Output ($Indent + $IndentFile + $SubFile.Name) }
         }
-        $BuilderRef.Value.AppendLine($Indent + $IndentFile) | Out-Null
+        Write-Output ($Indent + $IndentFile)
     }
     if ($SubDirs.Count -gt 0)
     { 
@@ -49,6 +54,4 @@ function GenerateTree
     }
 }
 
-$sb = New-Object System.Text.StringBuilder 
-GenerateTree -BuilderRef ([ref]$sb) -CurrentDir $Path
-$sb.ToString()
+GenerateTree -CurrentDir $Path
