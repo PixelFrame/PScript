@@ -1,3 +1,5 @@
+# For Windows PowerShell, encoding needs to be UTF-8 with BOM
+
 [CmdletBinding()]
 param (
     [Parameter()] [string] $Path = $PSScriptRoot,
@@ -48,9 +50,9 @@ function GenerateTree
     { 
         for ($i = 0; $i -lt $SubDirs.Count - 1; $i++)
         {
-            GenerateTree -BuilderRef $BuilderRef -CurrentDir $SubDirs[$i] -Indent ($Indent + $IndentNext) -DirType 1
+            GenerateTree -CurrentDir $SubDirs[$i].FullName -Indent ($Indent + $IndentNext) -DirType 1
         }
-        GenerateTree -BuilderRef $BuilderRef  -CurrentDir $SubDirs[$SubDirs.Count - 1] -Indent ($Indent + $IndentNext) -DirType 2
+        GenerateTree -CurrentDir $SubDirs[$SubDirs.Count - 1].FullName -Indent ($Indent + $IndentNext) -DirType 2
     }
 }
 
