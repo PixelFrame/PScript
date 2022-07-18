@@ -3,7 +3,7 @@ param (
     [Parameter(Mandatory = $true)]
     [string] $Etl,
     [Parameter(Mandatory = $true)]
-    [ValidateSet('TMF', 'Split', 'pcapng', 'pktmonpcapng', 'pktmonformat')]
+    [ValidateSet('TMF', 'Split', 'pcapng', 'ws-etwdump', 'pktmonpcapng', 'pktmonformat')]
     [string] $Mode
 )
 
@@ -30,6 +30,30 @@ try
             $OutFile = $EtlFile.DirectoryName + '\' + $EtlFile.BaseName + '.pcapng'
             $OutLog = $EtlFile.DirectoryName + '\' + $EtlFile.BaseName + '-etl2pcapng_out.txt'
             etl2pcapng.exe $EtlFile $OutFile | Tee-Object -FilePath $OutLog
+        }
+        'ws-etwdump'
+        {
+            if (!(Test-Path 'C:\Program Files\Wireshark\extcap\etwdump.exe')) { throw [System.IO.FileNotFoundException] 'etwdump not available' }
+            $WiresharkPreferences = $env:APPDATA + '\Wireshark\preferences'
+            if (!(Test-Path $WiresharkPreferences)) { throw [System.IO.FileNotFoundException] 'Wireshark preferences not found!' }
+            $WiresharkPreferencesContent = Get-Content $WiresharkPreferences
+            $lineNum = 0
+            foreach ($line in $WiresharkPreferencesContent)
+            {
+                if ($line -like '*extcap.etwdump.etlfile:*')
+                {
+                    $WiresharkPreferencesContent[$lineNum] = "extcap.etwdump.etlfile: $($EtlFile.FullName)"
+                }
+                if ($line -like '*extcap.etwdump.params:*')
+                {
+                    $WiresharkPreferencesContent[$lineNum] = "#extcap.etwdump.params:"
+                }
+                $lineNum++
+            }
+            $WiresharkPreferencesContent | Set-Content $WiresharkPreferences
+            'C: && cd "C:\Program Files\Wireshark"
+            start .\Wireshark.exe -i etwdump -k' | Out-File $env:Temp\startws.bat   # Wireshark will exit with console if it is directly called from console, so have to call it from a batch
+            & $env:Temp\startws.bat
         }
         'Split'
         {

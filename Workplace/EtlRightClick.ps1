@@ -1,15 +1,16 @@
 [CmdletBinding()]
 param (
     [Parameter()]
-    [switch]
-    $Deconfig,
+    [bool]
+    $Deconfig = $false,
 
     [Parameter()]
     [bool]
     $UserMode = $true,
-
-    [switch]
-    $Pwsh
+    
+    [Parameter()]
+    [bool]
+    $Pwsh = $false
 )
 
 function Write-Registry
@@ -52,6 +53,10 @@ function Write-Registry
         if (!(Test-Path $ClassPath\'shell\Convert to pcapng\command')) { (New-Item $ClassPath\'shell\Convert to pcapng\command' -Force).Name }
         Set-ItemProperty -Path $ClassPath\'shell\Convert to pcapng\command' -Name '(default)' -Value "$Global:PwshExec -NoProfile -File `"$StubPath`" -Etl `"%1`" -Mode pcapng" -Force
         
+        if (!(Test-Path $ClassPath\'shell\Open in Wireshark (etwdump)')) { (New-Item $ClassPath\'shell\Open in Wireshark (etwdump)' -Force).Name }
+        if (!(Test-Path $ClassPath\'shell\Open in Wireshark (etwdump)\command')) { (New-Item $ClassPath\'shell\Open in Wireshark (etwdump)\command' -Force).Name }
+        Set-ItemProperty -Path $ClassPath\'shell\Open in Wireshark (etwdump)\command' -Name '(default)' -Value "$Global:PwshExec -NoProfile -File `"$StubPath`" -Etl `"%1`" -Mode ws-etwdump" -Force
+
         if (!(Test-Path $ClassPath\'shell\Convert to pcapng (pktmon)')) { (New-Item $ClassPath\'shell\Convert to pcapng (pktmon)' -Force).Name }
         if (!(Test-Path $ClassPath\'shell\Convert to pcapng (pktmon)\command')) { (New-Item $ClassPath\'shell\Convert to pcapng (pktmon)\command' -Force).Name }
         Set-ItemProperty -Path $ClassPath\'shell\Convert to pcapng (pktmon)\command' -Name '(default)' -Value "$Global:PwshExec -NoProfile -File `"$StubPath`" -Etl `"%1`" -Mode pktmonpcapng" -Force
@@ -102,6 +107,10 @@ function Write-RegistryUser
         if (!(Test-Path $ClassPath\'shell\Convert to pcapng\command')) { (New-Item $ClassPath\'shell\Convert to pcapng\command' -Force).Name }
         Set-ItemProperty -Path $ClassPath\'shell\Convert to pcapng\command' -Name '(default)' -Value "$Global:PwshExec -NoProfile -File `"$StubPath`" -Etl `"%1`" -Mode pcapng" -Force
         
+        if (!(Test-Path $ClassPath\'shell\Open in Wireshark (etwdump)')) { (New-Item $ClassPath\'shell\Open in Wireshark (etwdump)' -Force).Name }
+        if (!(Test-Path $ClassPath\'shell\Open in Wireshark (etwdump)\command')) { (New-Item $ClassPath\'shell\Open in Wireshark (etwdump)\command' -Force).Name }
+        Set-ItemProperty -Path $ClassPath\'shell\Open in Wireshark (etwdump)\command' -Name '(default)' -Value "$Global:PwshExec -NoProfile -File `"$StubPath`" -Etl `"%1`" -Mode ws-etwdump" -Force
+
         if (!(Test-Path $ClassPath\'shell\Convert to pcapng (pktmon)')) { (New-Item $ClassPath\'shell\Convert to pcapng (pktmon)' -Force).Name }
         if (!(Test-Path $ClassPath\'shell\Convert to pcapng (pktmon)\command')) { (New-Item $ClassPath\'shell\Convert to pcapng (pktmon)\command' -Force).Name }
         Set-ItemProperty -Path $ClassPath\'shell\Convert to pcapng (pktmon)\command' -Name '(default)' -Value "$Global:PwshExec -NoProfile -File `"$StubPath`" -Etl `"%1`" -Mode pktmonpcapng" -Force
@@ -132,6 +141,7 @@ function Remove-Registry
         if ((Test-Path $ClassPath\'shell\Format (pktmon)')) { Remove-Item $ClassPath\'shell\Format (pktmon)' -Recurse -Force }
         if ((Test-Path $ClassPath\'shell\Split Trace')) { Remove-Item $ClassPath\'shell\Split Trace' -Recurse -Force }
         if ((Test-Path $ClassPath\'shell\Convert to pcapng')) { Remove-Item $ClassPath\'shell\Convert to pcapng' -Recurse -Force }
+        if ((Test-Path $ClassPath\'shell\Open in Wireshark (etwdump)')) { Remove-Item $ClassPath\'shell\Open in Wireshark (etwdump)' -Recurse -Force }
         if ((Test-Path $ClassPath\'shell\Convert to pcapng (pktmon)')) { Remove-Item $ClassPath\'shell\Convert to pcapng (pktmon)' -Recurse -Force }
     }
     Remove-ItemProperty -Path "HKCR:\.etl" -Name 'EtlStubPath'
@@ -156,6 +166,7 @@ function Remove-RegistryUser
         if ((Test-Path $ClassPath\'shell\Format (pktmon)')) { Remove-Item $ClassPath\'shell\Format (pktmon)' -Recurse -Force }
         if ((Test-Path $ClassPath\'shell\Split Trace')) { Remove-Item $ClassPath\'shell\Split Trace' -Recurse -Force }
         if ((Test-Path $ClassPath\'shell\Convert to pcapng')) { Remove-Item $ClassPath\'shell\Convert to pcapng' -Recurse -Force }
+        if ((Test-Path $ClassPath\'shell\Open in Wireshark (etwdump)')) { Remove-Item $ClassPath\'shell\Open in Wireshark (etwdump)' -Recurse -Force }
         if ((Test-Path $ClassPath\'shell\Convert to pcapng (pktmon)')) { Remove-Item $ClassPath\'shell\Convert to pcapng (pktmon)' -Recurse -Force }
     }
     Remove-ItemProperty -Path "HKCU:\SOFTWARE\Classes\.etl" -Name 'EtlStubPath'
@@ -173,7 +184,7 @@ param (
     [Parameter(Mandatory = `$true)]
     [string] `$Etl,
     [Parameter(Mandatory = `$true)]
-    [ValidateSet('TMF', 'Split', 'pcapng', 'pktmonpcapng', 'pktmonformat')]
+    [ValidateSet('TMF', 'Split', 'pcapng', 'ws-etwdump', 'pktmonpcapng', 'pktmonformat')]
     [string] `$Mode
 )
 
@@ -201,6 +212,30 @@ try
             `$OutFile = `$EtlFile.DirectoryName + '\' + `$EtlFile.BaseName + '.pcapng'
             `$OutLog = `$EtlFile.DirectoryName + '\' + `$EtlFile.BaseName + '-etl2pcapng_out.txt'
             etl2pcapng.exe `$EtlFile `$OutFile | Tee-Object -FilePath `$OutLog
+        }
+        'ws-etwdump'
+        {
+            if (!(Test-Path 'C:\Program Files\Wireshark\extcap\etwdump.exe')) { throw [System.IO.FileNotFoundException] 'etwdump not available' }
+            `$WiresharkPreferences = `$env:APPDATA + '\Wireshark\preferences'
+            if (!(Test-Path `$WiresharkPreferences)) { throw [System.IO.FileNotFoundException] 'Wireshark preferences not found!' }
+            `$WiresharkPreferencesContent = Get-Content `$WiresharkPreferences
+            `$lineNum = 0
+            foreach (`$line in `$WiresharkPreferencesContent)
+            {
+                if (`$line -like '*extcap.etwdump.etlfile:*')
+                {
+                    `$WiresharkPreferencesContent[`$lineNum] = "extcap.etwdump.etlfile: `$(`$EtlFile.FullName)"
+                }
+                if (`$line -like '*extcap.etwdump.params:*')
+                {
+                    `$WiresharkPreferencesContent[`$lineNum] = "#extcap.etwdump.params:"
+                }
+                `$lineNum++
+            }
+            `$WiresharkPreferencesContent | Set-Content `$WiresharkPreferences
+            'C: && cd "C:\Program Files\Wireshark"
+            start .\Wireshark.exe -i etwdump -k' | Out-File $env:Temp\startws.bat
+            & $env:Temp\startws.bat
         }
         'Split'
         {
