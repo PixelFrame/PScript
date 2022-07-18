@@ -216,26 +216,9 @@ try
         'ws-etwdump'
         {
             if (!(Test-Path 'C:\Program Files\Wireshark\extcap\etwdump.exe')) { throw [System.IO.FileNotFoundException] 'etwdump not available' }
-            `$WiresharkPreferences = `$env:APPDATA + '\Wireshark\preferences'
-            if (!(Test-Path `$WiresharkPreferences)) { throw [System.IO.FileNotFoundException] 'Wireshark preferences not found!' }
-            `$WiresharkPreferencesContent = Get-Content `$WiresharkPreferences
-            `$lineNum = 0
-            foreach (`$line in `$WiresharkPreferencesContent)
-            {
-                if (`$line -like '*extcap.etwdump.etlfile:*')
-                {
-                    `$WiresharkPreferencesContent[`$lineNum] = "extcap.etwdump.etlfile: `$(`$EtlFile.FullName)"
-                }
-                if (`$line -like '*extcap.etwdump.params:*')
-                {
-                    `$WiresharkPreferencesContent[`$lineNum] = "#extcap.etwdump.params:"
-                }
-                `$lineNum++
-            }
-            `$WiresharkPreferencesContent | Set-Content `$WiresharkPreferences
-            'C: && cd "C:\Program Files\Wireshark"
-            start .\Wireshark.exe -i etwdump -k' | Out-File $env:Temp\startws.bat
-            & $env:Temp\startws.bat
+            `"C: && cd ``"C:\Program Files\Wireshark``"
+            start .\Wireshark.exe -i etwdump -o ``"extcap.etwdump.etlfile:`$(`$EtlFile.FullName)``" -k`" | Out-File `$env:Temp\startws.bat
+            & `$env:Temp\startws.bat
         }
         'Split'
         {
