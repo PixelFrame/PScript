@@ -3,7 +3,7 @@
 try
 { 
     if (![System.Diagnostics.EventLog]::SourceExists('StartAria2')) 
-    { [System.Diagnostics.EventLog]::CreateEventSource('Application', 'StartAria2') }
+    { [System.Diagnostics.EventLog]::CreateEventSource('StartAria2', 'Application') }
 }
 catch { $_ > $PSScriptRoot\EventLogFailed.txt; Exit -1 }
 try { Get-Command aria2c.exe -ErrorAction Stop | Out-Null }
