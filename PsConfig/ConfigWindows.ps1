@@ -1,7 +1,22 @@
 #requires -RunAsAdministrator
 
+#region Helper Functions
+function Test-AppAvailability
+{
+  param (
+    [string] $cmdlet
+  )
+  try 
+  {
+    Get-Command $cmdlet -ErrorAction Stop | Out-Null
+    return $true
+  }
+  catch { return $false }
+}
+#endregion
+
 #region Script Variables
-$Script:Version = '0.0.1-ALPHA'
+$Script:Version = '0.0.2-ALPHA'
 $Script:WinPsProfileDir = "$($env:USERPROFILE)\Documents\WindowsPowerShell"
 $Script:PwshProfileDir = "$($env:USERPROFILE)\Documents\PowerShell"
 $Script:PoshConfig = @'
@@ -109,7 +124,7 @@ if (([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]:
     `$IsAdmin = '[Administrator] '
 }
 else { `$IsAdmin = '' }
-$Host.UI.RawUI.WindowTitle = `$IsAdmin + `$env:USERDOMAIN + '\' + `$env:USERNAME + 'PowerShell ' +  $PSVersionTable.PSVersion.ToString() + " @ " + [environment]::OSVersion.VersionString
+`$Host.UI.RawUI.WindowTitle = `$IsAdmin + `$env:USERDOMAIN + '\' + `$env:USERNAME + 'PowerShell ' +  `$PSVersionTable.PSVersion.ToString() + " @ " + [environment]::OSVersion.VersionString
 
 # Welcome
 Write-Host @'
@@ -126,24 +141,29 @@ Write-Host @'
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12 -bor [Net.SecurityProtocolType]::Tls13
 
 #region Install winget
-try 
+if (!(Test-AppAvailability winget))
 {
-    Get-Command winget -ErrorAction Stop | Out-Null
-    $hasPackageManager = $true
-}
-catch
-{
-    $hasPackageManager = $false
-}
+  if (!(Get-AppxPackage Microsoft.DesktopAppInstaller))
+  {
+    Add-AppxPackage 'https://aka.ms/Microsoft.VCLibs.x64.14.00.Desktop.appx'
 
-if (!$hasPackageManager)
-{
     $releases_url = "https://api.github.com/repos/microsoft/winget-cli/releases/latest"
-
     $releases = Invoke-RestMethod -Uri "$($releases_url)"
-    $latestRelease = $releases.assets | Where-Object { $_.browser_download_url.EndsWith("msixbundle") } | Select-Object -First 1
-	
-    Add-AppxPackage -Path $latestRelease.browser_download_url -ErrorAction Stop
+    $latestMsix = ($releases.assets | Where-Object { $_.browser_download_url.EndsWith("msixbundle") } | Select-Object -First 1).browser_download_url
+    try { Add-AppPackage -Path $latestMsix -ErrorAction Stop }
+    catch
+    {
+      $_.Exception.InnerException.Message
+      "Please download and install Microsoft.UI.Xaml manually and try again."
+      exit
+    }
+  }
+  else
+  {
+    "Appx installation has finished while winget cli is still not available..."
+    "Restart the terminal and try again. If the error continues, try Add-ProvisionedAppxPackage."
+    exit
+  }
 }
 #endregion
 
@@ -152,13 +172,14 @@ Invoke-Expression ((New-Object System.Net.WebClient).DownloadString('https://com
 #endregion
 
 #region Install git, VSCode, Notepad3, Windows Terminal, pwsh, gsudo
-winget install 'Git.Git' -h
-winget install 'Microsoft.VisualStudioCode' -h
+if (!(Test-AppAvailability git)) { winget install 'Git.Git' -h }
+if (!(Test-AppAvailability code.cmd)) { winget install 'Microsoft.VisualStudioCode' -h }
 choco install 'Notepad3' -y
-winget install 'Microsoft.WindowsTerminal' -h
-winget install 'Microsoft.PowerShell' -h
-winget install 'gerardog.gsudo' -h
-winget install 'JanDeDobbeleer.OhMyPosh' -h
+if (!(Test-AppAvailability wt)) { winget install 'Microsoft.WindowsTerminal' -h }
+if (!(Test-AppAvailability pwsh)) { winget install 'Microsoft.PowerShell' -h }
+if (!(Test-AppAvailability gsudo)) { winget install 'gerardog.gsudo' -h }
+if (!(Test-AppAvailability oh-my-posh)) { winget install 'JanDeDobbeleer.OhMyPosh' -h }
+if (!(Test-AppAvailability nanazip)) { winget install 'M2Team.NanaZip' -h }
 #endregion
 
 #region Install fonts
@@ -171,20 +192,20 @@ $Utf8WithourBom = New-Object System.Text.UTF8Encoding $False
 #endregion
 
 #region Configure PS profile
-if (!(Test-Path $Script:PwshProfileDir )) { New-Item $Script:WinPsProfileDir -ItemType Directory | Out-Null }
-if (!(Test-Path $Script:PwshProfileDir\Scripts )) { New-Item $Script:WinPsProfileDir\Scripts -ItemType Directory | Out-Null }
+if (!(Test-Path $Script:PwshProfileDir )) { New-Item $Script:PwshProfileDir -ItemType Directory | Out-Null }
+if (!(Test-Path $Script:PwshProfileDir\Scripts )) { New-Item $Script:PwshProfileDir\Scripts -ItemType Directory | Out-Null }
 if ((Test-Path $Script:WinPsProfileDir )) { Remove-Item $Script:WinPsProfileDir -Recurse -Force }
 New-Item -Path $Script:WinPsProfileDir -ItemType Junction -Value $Script:PwshProfileDir
 $Utf8WithBom = New-Object System.Text.UTF8Encoding $true
 [System.IO.File]::WriteAllLines("$Script:PwshProfileDir\Microsoft.PowerShell_profile.ps1", $Script:ProfilePs1, $Utf8WithBom)
-'# User Defined Functions' | Out-File "$Script:PwshProfileDir\Functions.ps1"
-'# User Defined Aliases' | Out-File "$Script:PwshProfileDir\Alias.ps1"
+'# User Defined Functions' | Out-File "$Script:PwshProfileDir\Scripts\Functions.ps1"
+'# User Defined Aliases' | Out-File "$Script:PwshProfileDir\Scripts\Alias.ps1"
 #endregion
 
 #region Configure Windows Terminal
 $WinTermJson = $env:LOCALAPPDATA + '\Packages\Microsoft.WindowsTerminal_8wekyb3d8bbwe\LocalState\settings.json'
 $WinTermSetting = ConvertFrom-Json (Get-Content $WinTermJson -Raw)
-$WinTermSetting | Add-Member @{tabWidthMode = 'compact' }
-$WinTermSetting.profiles.defaults | Add-Member @{font=@{face='CaskaydiaCove NF'}}
+$WinTermSetting | Add-Member @{tabWidthMode = 'compact' } -Force
+$WinTermSetting.profiles.defaults | Add-Member @{font = @{face = 'CaskaydiaCove NF' } } -Force
 $WinTermSetting | ConvertTo-Json -Depth 4 | Set-Content $WinTermJson
 #endregion
