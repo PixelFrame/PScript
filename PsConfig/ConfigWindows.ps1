@@ -60,8 +60,20 @@ $Script:PoshConfig = @'
           "foreground": "#100e23",
           "powerline_symbol": "\ue0b0",
           "style": "powerline",
-          "template": " {{ .HEAD }} {{ .BranchStatus }}{{ if .Working.Changed }} \u2026{{ .Working.String }}{{ end }}{{ if and (.Staging.Changed) (.Working.Changed) }} |{{ end }}{{ if .Staging.Changed }} ·{{ .Staging.String }}{{ end }}{{ if gt .StashCount 0}} \uf692 {{ .StashCount }}{{ end }}{{ if gt .WorktreeCount 0}} \uf1bb {{ .WorktreeCount }}{{ end }} ",
+          "template": " {{ .HEAD }} {{ .BranchStatus }}{{ if .Working.Changed }} \u2026{{ .Working.String }}{{ end }}{{ if and (.Staging.Changed) (.Working.Changed) }} |{{ end }}{{ if .Staging.Changed }} Â·{{ .Staging.String }}{{ end }}{{ if gt .StashCount 0}} \uf692 {{ .StashCount }}{{ end }}{{ if gt .WorktreeCount 0}} \uf1bb {{ .WorktreeCount }}{{ end }} ",
           "type": "git"
+        },
+        {
+          "type": "executiontime",
+          "style": "powerline",
+          "powerline_symbol": "\ue0b0",
+          "foreground": "#100e23",
+          "background": "#ccdbf1",
+          "template": " <#100e23>\ufbab</> {{ .FormattedMs }} ",
+          "properties": {
+            "threshold": 100,
+            "style": "austin"
+          }
         },
         {
           "background": "#00245a",
@@ -124,7 +136,7 @@ if (([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]:
     `$IsAdmin = '[Administrator] '
 }
 else { `$IsAdmin = '' }
-`$Host.UI.RawUI.WindowTitle = `$IsAdmin + `$env:USERDOMAIN + '\' + `$env:USERNAME + 'PowerShell ' +  `$PSVersionTable.PSVersion.ToString() + " @ " + [environment]::OSVersion.VersionString
+`$Host.UI.RawUI.WindowTitle = `$IsAdmin + `$env:USERDOMAIN + '\' + `$env:USERNAME + ' PowerShell ' +  `$PSVersionTable.PSVersion.ToString() + " @ " + [environment]::OSVersion.VersionString
 
 # Welcome
 Write-Host @'
