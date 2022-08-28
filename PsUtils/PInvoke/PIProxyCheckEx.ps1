@@ -209,9 +209,9 @@ function PrintProxyInfo
         [WINHTTP_PROXY_INFO]
         $ProxyInfo
     )
-    Write-Host "    Access Type  : {0}" -f $ProxyInfo.dwAccessType 
-    Write-Host "    Proxy Server : {0}" -f $ProxyInfo.lpszProxy 
-    Write-Host "    Bypass List  : {0}" -f $ProxyInfo.lpszProxyBypass 
+    Write-Host ("    Access Type  : {0}" -f $ProxyInfo.dwAccessType )
+    Write-Host ("    Proxy Server : {0}" -f $ProxyInfo.lpszProxy )
+    Write-Host ("    Bypass List  : {0}" -f $ProxyInfo.lpszProxyBypass )
 }
 
 function PrintIEProxyConfig
@@ -223,9 +223,9 @@ function PrintIEProxyConfig
     
     if ($IEProxyConfig.fAutoDetect) { "    Auto Detect     : True" }
     else { "    Auto Detect     : False" }
-    Write-Host "    Auto Config URL : {0}" -f $IEProxyConfig.lpszAutoConfigUrl
-    Write-Host "    Proxy Server    : {0}" -f $IEProxyConfig.lpszProxy 
-    Write-Host "    Bypass List     : {0}" -f $IEProxyConfig.lpszProxyBypass 
+    Write-Host ("    Auto Config URL : {0}" -f $IEProxyConfig.lpszAutoConfigUrl )
+    Write-Host ("    Proxy Server    : {0}" -f $IEProxyConfig.lpszProxy )
+    Write-Host ("    Bypass List     : {0}" -f $IEProxyConfig.lpszProxyBypass )
 }
 
 function Get-SubArray
