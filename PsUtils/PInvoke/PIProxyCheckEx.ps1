@@ -568,6 +568,40 @@ else
     "    No DNS WPAD Detected. Code: $ErrorCode ($([WinHTTP]::ErrorMessage[$ErrorCode]))"
 }
 
+try 
+{
+    $IsWpadDisabled = Get-ItemPropertyValue -Path 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Internet Settings\WinHttp' -Name DisableWpad -ErrorAction Stop
+}
+catch
+{
+    $IsWpadDisabled = 0
+}
+if ($IsWpadDisabled -eq 0)
+{
+    Write-Host "WPAD not disabled by HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Internet Settings\WinHttp\DisableWpad" -ForegroundColor Green
+}
+else
+{
+    Write-Host "WPAD disabled by HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Internet Settings\WinHttp\DisableWpad" -ForegroundColor Red
+}
+
+try 
+{
+    $IsWpadDisabled = Get-ItemPropertyValue -Path 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\CurrentVersion\Internet Settings\WinHttp' -Name DisableWpad -ErrorAction Stop
+}
+catch
+{
+    $IsWpadDisabled = 0
+}
+if ($IsWpadDisabled -eq 0)
+{
+    Write-Host "WPAD not disabled by HKLM\SOFTWARE\Policies\Microsoft\Windows\CurrentVersion\Internet Settings\WinHttp\DisableWpad" -ForegroundColor Green
+}
+else
+{
+    Write-Host "WPAD disabled by HKLM\SOFTWARE\Policies\Microsoft\Windows\CurrentVersion\Internet Settings\WinHttp\DisableWpad" -ForegroundColor Red
+}
+
 if ($Url.Length -gt 0)
 {
     if ($AutoProxyAvailable)
