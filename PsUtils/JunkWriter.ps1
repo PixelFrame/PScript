@@ -2,10 +2,12 @@
 [CmdletBinding()]
 param (
     [Parameter()]
+    [ValidateRange(0, 32767)]
     [UInt32]
     $UpperSize = 1024,
 
     [Parameter()]
+    [ValidateRange(0, 32767)]
     [UInt32]
     $BottomSize = 100,
 
@@ -22,8 +24,8 @@ param (
     $DelayMili = 0
 )
 
-
-$RngCsp = New-Object System.Security.Cryptography.RNGCryptoServiceProvider
+# RNGCryptoServiceProvider Deprecated
+# $RngCsp = New-Object System.Security.Cryptography.RNGCryptoServiceProvider
 
 while(--$Number -ge 0) {
     $cnt = 0
@@ -33,8 +35,9 @@ while(--$Number -ge 0) {
 
     while ($cnt++ -lt 16)
     {
-        $Bytes = New-Object byte[] -ArgumentList (65536 * $Size)
-        $RngCsp.GetBytes($Bytes)
+        # $Bytes = New-Object byte[] -ArgumentList (65536 * $Size)
+        # $RngCsp.GetBytes($Bytes)
+        $Bytes = [System.Security.Cryptography.RandomNumberGenerator]::GetBytes(65536 * $Size)
         $OutFile.Write($Bytes, 0, 65536 * $Size)
         Start-Sleep -Milliseconds $DelayMili
     }
@@ -43,4 +46,4 @@ while(--$Number -ge 0) {
     $OutFile.Dispose()
 }
 
-$RngCsp.Dispose()
+# $RngCsp.Dispose()
