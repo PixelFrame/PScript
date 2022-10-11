@@ -427,11 +427,11 @@ catch
 }
 if ($IsPerUser -eq 0)
 {
-    Write-Host "Per Machine" -ForegroundColor Yellow
+    Write-Host "    Per Machine" -ForegroundColor Yellow
 }
 else
 {
-    Write-Host "Per User" -ForegroundColor Green
+    Write-Host "    Per User" -ForegroundColor Green
 }
 
 Write-Host "`nWinINET Proxies in Registry" -ForegroundColor Blue
@@ -446,14 +446,14 @@ foreach ($Hive in $UserHives)
         $Username = $Hive.SubString(5)
         if ($Username -like 'S-1-5*') { $Username = Convert-SidToUsername $Username }
         $Pathx64 = $Hive + $Keyx64
-        Write-Host "DefaultConnectionSettings of User $Username" -ForegroundColor Cyan
-        Write-Host $Pathx64 -ForegroundColor Cyan
+        Write-Host "    DefaultConnectionSettings of User $Username" -ForegroundColor Cyan
+        Write-Host "    $Pathx64" -ForegroundColor Cyan
         $DefConn = Get-ItemPropertyValue -Path $Pathx64 -Name DefaultConnectionSettings -ErrorAction Stop
         ConvertFrom-ProxySettingsBinary $DefConn
     }
     catch
     {
-        Write-Host "Proxy settings not existing or insufficient permission`n"
+        Write-Host "    Proxy settings not existing or insufficient permission`n"
     }
     if ($IncludeWOW64)
     {
@@ -462,22 +462,22 @@ foreach ($Hive in $UserHives)
             $Username = $Hive.SubString(5)
             if ($Username -like 'S-1-5*') { $Username = Convert-SidToUsername $Username }
             $Pathx86 = $Hive + $Keyx86
-            Write-Host "DefaultConnectionSettings of User $Username" -ForegroundColor DarkCyan
-            Write-Host $Pathx86 -ForegroundColor DarkCyan
+            Write-Host "    DefaultConnectionSettings of User $Username" -ForegroundColor DarkCyan
+            Write-Host "    $Pathx86" -ForegroundColor DarkCyan
             $DefConn = Get-ItemPropertyValue -Path $Pathx86 -Name DefaultConnectionSettings -ErrorAction Stop
             ConvertFrom-ProxySettingsBinary $DefConn
         }
         catch
         {
-            Write-Host "Proxy settings not existing or insufficient permission`n"
+            Write-Host "    Proxy settings not existing or insufficient permission`n"
         }
     }
 }
 try
 {
     $Pathx64 = 'HKLM:' + $Keyx64
-    Write-Host "DefaultConnectionSettings of Machine" -ForegroundColor Cyan
-    Write-Host $Pathx64 -ForegroundColor Cyan
+    Write-Host "    DefaultConnectionSettings of Machine" -ForegroundColor Cyan
+    Write-Host "    $Pathx64" -ForegroundColor Cyan
     $DefConn = Get-ItemPropertyValue -Path $Pathx64 -Name DefaultConnectionSettings -ErrorAction Stop
     ConvertFrom-ProxySettingsBinary $DefConn
 }
@@ -490,8 +490,8 @@ if ($IncludeWOW64)
     try
     {
         $Pathx86 = 'HKLM:' + $Keyx86
-        Write-Host "DefaultConnectionSettings of Machine" -ForegroundColor Cyan
-        Write-Host $Pathx86 -ForegroundColor DarkCyan
+        Write-Host "    DefaultConnectionSettings of Machine" -ForegroundColor Cyan
+        Write-Host "    $Pathx86" -ForegroundColor DarkCyan
         $DefConn = Get-ItemPropertyValue -Path $Pathx86 -Name DefaultConnectionSettings -ErrorAction Stop
         ConvertFrom-ProxySettingsBinary $DefConn
     }
@@ -578,11 +578,11 @@ catch
 }
 if ($IsWpadDisabled -eq 0)
 {
-    Write-Host "WPAD not disabled by HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Internet Settings\WinHttp\DisableWpad" -ForegroundColor Green
+    Write-Host "    WPAD not disabled by HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Internet Settings\WinHttp\DisableWpad" -ForegroundColor Green
 }
 else
 {
-    Write-Host "WPAD disabled by HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Internet Settings\WinHttp\DisableWpad" -ForegroundColor Red
+    Write-Host "    WPAD disabled by HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Internet Settings\WinHttp\DisableWpad" -ForegroundColor Red
 }
 
 try 
@@ -595,11 +595,11 @@ catch
 }
 if ($IsWpadDisabled -eq 0)
 {
-    Write-Host "WPAD not disabled by HKLM\SOFTWARE\Policies\Microsoft\Windows\CurrentVersion\Internet Settings\WinHttp\DisableWpad" -ForegroundColor Green
+    Write-Host "    WPAD not disabled by HKLM\SOFTWARE\Policies\Microsoft\Windows\CurrentVersion\Internet Settings\WinHttp\DisableWpad" -ForegroundColor Green
 }
 else
 {
-    Write-Host "WPAD disabled by HKLM\SOFTWARE\Policies\Microsoft\Windows\CurrentVersion\Internet Settings\WinHttp\DisableWpad" -ForegroundColor Red
+    Write-Host "    WPAD disabled by HKLM\SOFTWARE\Policies\Microsoft\Windows\CurrentVersion\Internet Settings\WinHttp\DisableWpad" -ForegroundColor Red
 }
 
 if ($Url.Length -gt 0)
@@ -682,27 +682,27 @@ if ($Url.Length -gt 0)
 }
 
 Write-Host "`nEnvironment Variables (for libcurl)" -ForegroundColor Blue
-Write-Host 'http_proxy' -ForegroundColor Cyan
+Write-Host '    http_proxy' -ForegroundColor Cyan
 Write-Host "    User    : $([Environment]::GetEnvironmentVariable('http_proxy', [EnvironmentVariableTarget]::User))"
 Write-Host "    Machine : $([Environment]::GetEnvironmentVariable('http_proxy', [EnvironmentVariableTarget]::Machine))"
 Write-Host "    Process : $([Environment]::GetEnvironmentVariable('http_proxy', [EnvironmentVariableTarget]::User))"
 
-Write-Host 'HTTPS_PROXY' -ForegroundColor Cyan
+Write-Host '    HTTPS_PROXY' -ForegroundColor Cyan
 Write-Host "    User    : $([Environment]::GetEnvironmentVariable('HTTPS_PROXY', [EnvironmentVariableTarget]::User))"
 Write-Host "    Machine : $([Environment]::GetEnvironmentVariable('HTTPS_PROXY', [EnvironmentVariableTarget]::Machine))"
 Write-Host "    Process : $([Environment]::GetEnvironmentVariable('HTTPS_PROXY', [EnvironmentVariableTarget]::User))"
 
-Write-Host 'FTP_PROXY' -ForegroundColor Cyan
+Write-Host '    FTP_PROXY' -ForegroundColor Cyan
 Write-Host "    User    : $([Environment]::GetEnvironmentVariable('FTP_PROXY', [EnvironmentVariableTarget]::User))"
 Write-Host "    Machine : $([Environment]::GetEnvironmentVariable('FTP_PROXY', [EnvironmentVariableTarget]::Machine))"
 Write-Host "    Process : $([Environment]::GetEnvironmentVariable('FTP_PROXY', [EnvironmentVariableTarget]::User))"
 
-Write-Host 'ALL_PROXY' -ForegroundColor Cyan
+Write-Host '    ALL_PROXY' -ForegroundColor Cyan
 Write-Host "    User    : $([Environment]::GetEnvironmentVariable('ALL_PROXY', [EnvironmentVariableTarget]::User))"
 Write-Host "    Machine : $([Environment]::GetEnvironmentVariable('ALL_PROXY', [EnvironmentVariableTarget]::Machine))"
 Write-Host "    Process : $([Environment]::GetEnvironmentVariable('ALL_PROXY', [EnvironmentVariableTarget]::User))"
 
-Write-Host 'NO_PROXY' -ForegroundColor Cyan
+Write-Host '    NO_PROXY' -ForegroundColor Cyan
 Write-Host "    User    : $([Environment]::GetEnvironmentVariable('NO_PROXY', [EnvironmentVariableTarget]::User))"
 Write-Host "    Machine : $([Environment]::GetEnvironmentVariable('NO_PROXY', [EnvironmentVariableTarget]::Machine))"
 Write-Host "    Process : $([Environment]::GetEnvironmentVariable('NO_PROXY', [EnvironmentVariableTarget]::User))"

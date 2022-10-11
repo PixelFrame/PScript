@@ -285,11 +285,11 @@ catch
 }
 if ($IsWpadDisabled -eq 0)
 {
-    Write-Host "WPAD not disabled by HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Internet Settings\WinHttp\DisableWpad" -ForegroundColor Green
+    Write-Host "    WPAD not disabled by HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Internet Settings\WinHttp\DisableWpad" -ForegroundColor Green
 }
 else
 {
-    Write-Host "WPAD disabled by HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Internet Settings\WinHttp\DisableWpad" -ForegroundColor Red
+    Write-Host "    WPAD disabled by HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Internet Settings\WinHttp\DisableWpad" -ForegroundColor Red
 }
 
 try 
@@ -302,11 +302,11 @@ catch
 }
 if ($IsWpadDisabled -eq 0)
 {
-    Write-Host "WPAD not disabled by HKLM\SOFTWARE\Policies\Microsoft\Windows\CurrentVersion\Internet Settings\WinHttp\DisableWpad" -ForegroundColor Green
+    Write-Host "    WPAD not disabled by HKLM\SOFTWARE\Policies\Microsoft\Windows\CurrentVersion\Internet Settings\WinHttp\DisableWpad" -ForegroundColor Green
 }
 else
 {
-    Write-Host "WPAD disabled by HKLM\SOFTWARE\Policies\Microsoft\Windows\CurrentVersion\Internet Settings\WinHttp\DisableWpad" -ForegroundColor Red
+    Write-Host "    WPAD disabled by HKLM\SOFTWARE\Policies\Microsoft\Windows\CurrentVersion\Internet Settings\WinHttp\DisableWpad" -ForegroundColor Red
 }
 
 if ($Url.Length -gt 0)
