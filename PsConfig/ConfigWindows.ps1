@@ -3,15 +3,15 @@
 #region Helper Functions
 function Test-AppAvailability
 {
-  param (
-    [string] $cmdlet
-  )
-  try 
-  {
-    Get-Command $cmdlet -ErrorAction Stop | Out-Null
-    return $true
-  }
-  catch { return $false }
+    param (
+        [string] $cmdlet
+    )
+    try 
+    {
+        Get-Command $cmdlet -ErrorAction Stop | Out-Null
+        return $true
+    }
+    catch { return $false }
 }
 #endregion
 
@@ -29,7 +29,7 @@ $Script:PoshConfig = @'
         {
           "background": "#0050ac",
           "foreground": "#b6dcff",
-          "powerline_symbol": "\ue0b0",
+          "powerline_symbol": "\ue0b8 ",
           "style": "powerline",
           "template": " \uf0e7 ",
           "type": "root"
@@ -37,7 +37,7 @@ $Script:PoshConfig = @'
         {
           "background": "#358dff",
           "foreground": "#100e23",
-          "powerline_symbol": "\ue0b0",
+          "powerline_symbol": "\ue0b8 ",
           "style": "powerline",
           "template": " {{ if .SSHSession }}\uf817 {{ end }}{{ .UserName }}@{{ .HostName }} ",
           "type": "session"
@@ -45,7 +45,7 @@ $Script:PoshConfig = @'
         {
           "background": "#91ddff",
           "foreground": "#100e23",
-          "powerline_symbol": "\ue0b0",
+          "powerline_symbol": "\ue0b8 ",
           "properties": {
             "folder_icon": "\uf115",
             "folder_separator_icon": "\\",
@@ -58,7 +58,7 @@ $Script:PoshConfig = @'
         {
           "background": "#b6dcff",
           "foreground": "#100e23",
-          "powerline_symbol": "\ue0b0",
+          "powerline_symbol": "\ue0b8 ",
           "style": "powerline",
           "template": " {{ .HEAD }} {{ .BranchStatus }}{{ if .Working.Changed }} \u2026{{ .Working.String }}{{ end }}{{ if and (.Staging.Changed) (.Working.Changed) }} |{{ end }}{{ if .Staging.Changed }} Â·{{ .Staging.String }}{{ end }}{{ if gt .StashCount 0}} \uf692 {{ .StashCount }}{{ end }}{{ if gt .WorktreeCount 0}} \uf1bb {{ .WorktreeCount }}{{ end }} ",
           "type": "git"
@@ -66,7 +66,7 @@ $Script:PoshConfig = @'
         {
           "type": "executiontime",
           "style": "powerline",
-          "powerline_symbol": "\ue0b0",
+          "powerline_symbol": "\ue0b8 ",
           "foreground": "#100e23",
           "background": "#ccdbf1",
           "template": " <#100e23>\ufbab</> {{ .FormattedMs }} ",
@@ -78,7 +78,7 @@ $Script:PoshConfig = @'
         {
           "background": "#00245a",
           "foreground": "#ffffff",
-          "powerline_symbol": "\ue0b0",
+          "powerline_symbol": "\ue0b8 ",
           "properties": {
             "display_exit_code": true
           },
@@ -105,10 +105,8 @@ $Script:PoshConfig = @'
       "type": "prompt"
     },
     {
-      "type": "newline"
-    },
-    {
       "alignment": "left",
+      "newline": true,
       "segments": [
         {
           "foreground": "#007ACC",
@@ -155,27 +153,27 @@ Write-Host @'
 #region Install winget
 if (!(Test-AppAvailability winget))
 {
-  if (!(Get-AppxPackage Microsoft.DesktopAppInstaller))
-  {
-    Add-AppxPackage 'https://aka.ms/Microsoft.VCLibs.x64.14.00.Desktop.appx'
-
-    $releases_url = "https://api.github.com/repos/microsoft/winget-cli/releases/latest"
-    $releases = Invoke-RestMethod -Uri "$($releases_url)"
-    $latestMsix = ($releases.assets | Where-Object { $_.browser_download_url.EndsWith("msixbundle") } | Select-Object -First 1).browser_download_url
-    try { Add-AppPackage -Path $latestMsix -ErrorAction Stop }
-    catch
+    if (!(Get-AppxPackage Microsoft.DesktopAppInstaller))
     {
-      $_.Exception.InnerException.Message
-      "Please download and install Microsoft.UI.Xaml manually and try again."
-      exit
+        Add-AppxPackage 'https://aka.ms/Microsoft.VCLibs.x64.14.00.Desktop.appx'
+
+        $releases_url = "https://api.github.com/repos/microsoft/winget-cli/releases/latest"
+        $releases = Invoke-RestMethod -Uri "$($releases_url)"
+        $latestMsix = ($releases.assets | Where-Object { $_.browser_download_url.EndsWith("msixbundle") } | Select-Object -First 1).browser_download_url
+        try { Add-AppPackage -Path $latestMsix -ErrorAction Stop }
+        catch
+        {
+            $_.Exception.InnerException.Message
+            "Please download and install Microsoft.UI.Xaml manually and try again."
+            exit
+        }
     }
-  }
-  else
-  {
-    "Appx installation has finished while winget cli is still not available..."
-    "Restart the terminal and try again. If the error continues, try Add-ProvisionedAppxPackage."
-    exit
-  }
+    else
+    {
+        "Appx installation has finished while winget cli is still not available..."
+        "Restart the terminal and try again. If the error continues, try Add-ProvisionedAppxPackage."
+        exit
+    }
 }
 #endregion
 
@@ -199,8 +197,8 @@ choco install 'cascadiafonts' 'cascadia-code-nerd-font' -y
 #endregion
 
 #region Configure oh-my-posh
-$Utf8WithourBom = New-Object System.Text.UTF8Encoding $False
-[System.IO.File]::WriteAllLines("$($env:USERPROFILE)\.poshconfig.json", $Script:PoshConfig, $Utf8WithourBom)
+$Utf8WithoutBom = New-Object System.Text.UTF8Encoding $False
+[System.IO.File]::WriteAllLines("$($env:USERPROFILE)\.poshconfig.json", $Script:PoshConfig, $Utf8WithoutBom)
 #endregion
 
 #region Configure PS profile
