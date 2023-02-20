@@ -3,6 +3,10 @@ param (
     [Parameter()] [string] $SrcDir = "E:\Temp"
 )
 
+if ($SrcDir -like '?:"') {                  # For disk root (e.g. "E:") will be passed as E:" by shell param "%V"
+    $SrcDir = $SrcDir.Replace('"', '\')
+}
+
 Add-Type -AssemblyName System.Windows.Forms
 [System.Windows.Forms.Application]::EnableVisualStyles()
 
