@@ -91,20 +91,19 @@ $cbxRecusive.AutoSize = $true
 $cbxRecusive.Location = New-Object System.Drawing.Point(10, 125)
 $cbxRecusive.Font = New-Object System.Drawing.Font('Segoe UI', 11)
 
+$cbxPurge = New-Object System.Windows.Forms.CheckBox
+$cbxPurge.Text = "Purge"
+$cbxPurge.Checked = $true
+$cbxPurge.AutoSize = $true
+$cbxPurge.Location = New-Object System.Drawing.Point(110, 125)
+$cbxPurge.Font = New-Object System.Drawing.Font('Segoe UI', 11)
+
 $cbxSec = New-Object System.Windows.Forms.CheckBox
 $cbxSec.Text = "Copy SEC Info"
 $cbxSec.Checked = $true
 $cbxSec.AutoSize = $true
-$cbxSec.Location = New-Object System.Drawing.Point(100, 125)
+$cbxSec.Location = New-Object System.Drawing.Point(220, 125)
 $cbxSec.Font = New-Object System.Drawing.Font('Segoe UI', 11)
-$cbxSec.Add_CheckedChanged( { $cbxAudit.Enabled = $cbxSec.Checked; $cbxAudit.Checked = $false })
-
-$cbxAudit = New-Object System.Windows.Forms.CheckBox
-$cbxAudit.Text = "Copy Audit"
-$cbxAudit.Checked = $false
-$cbxAudit.AutoSize = $true
-$cbxAudit.Location = New-Object System.Drawing.Point(220, 125)
-$cbxAudit.Font = New-Object System.Drawing.Font('Segoe UI', 11)
 
 $cbxElevate = New-Object System.Windows.Forms.CheckBox
 $cbxElevate.Text = "Elevation"
@@ -117,7 +116,7 @@ $cbxLog = New-Object System.Windows.Forms.CheckBox
 $cbxLog.Text = "Logging"
 $cbxLog.Checked = $true
 $cbxLog.AutoSize = $true
-$cbxLog.Location = New-Object System.Drawing.Point(100, 155)
+$cbxLog.Location = New-Object System.Drawing.Point(110, 155)
 $cbxLog.Font = New-Object System.Drawing.Font('Segoe UI', 11)
 
 $cbxMon = New-Object System.Windows.Forms.CheckBox
@@ -151,7 +150,7 @@ function browseFolder
 
 $InputForm.AcceptButton = $BtnOK
 $InputForm.CancelButton = $BtnCancel
-$InputForm.Controls.AddRange(@($BtnOK, $BtnCancel, $tbInput, $tbSrcDir, $BtnBrowse, $rbFrom, $rbTo, $tbFilter, $cbxRecusive, $cbxSec, $cbxAudit, $cbxElevate, $cbxLog, $cbxMon, $numUpDown))
+$InputForm.Controls.AddRange(@($BtnOK, $BtnCancel, $tbInput, $tbSrcDir, $BtnBrowse, $rbFrom, $rbTo, $tbFilter, $cbxRecusive, $cbxSec, $cbxPurge, $cbxElevate, $cbxLog, $cbxMon, $numUpDown))
 $dlgResult = $InputForm.ShowDialog()
 
 if ($dlgResult -eq [System.Windows.Forms.DialogResult]::OK)
@@ -159,15 +158,14 @@ if ($dlgResult -eq [System.Windows.Forms.DialogResult]::OK)
     if ($rbFrom.Checked) { $param = "`"$($tbInput.Text)`" `"$SrcDir`" $($tbFilter.Text)" }
     else { $param = "`"$SrcDir`" `"$($tbInput.Text)`" $($tbFilter.Text)" }
     if ($cbxRecusive.Checked) { $param += " /E" }
-    if ($cbxSec.Checked) 
-    {
-        if ($cbxAudit.Checked) { $param += " /COPYALL" }
-        else { $param += " /SEC" } 
-    }
+    if ($cbxPurge.Checked) { $param += " /PURGE" }
+    if ($cbxSec.Checked) { $param += " /SEC" }
     if ($cbxLog.Checked) { 
         $userprofile = [Environment]::GetFolderPath("UserProfile")
-        $param += " /LOG+:`"$userprofile\FolderSync.log`"" 
+        $now = Get-Date -Format "yyyyMMdd_HHmmss"
+        $param += " /UNILOG:`"$userprofile\FolderSync_$now.log`" /TEE" 
     }
+    $params += " /ETA"
     if ($cbxMon.Checked) { $param += " /MON:$($numUpDown.Value)" }
     $confirm = [System.Windows.Forms.MessageBox]::Show("Do you confirm to run command: `r`nrobocopy.exe $param", "Confirm", [System.Windows.Forms.MessageBoxButtons]::YesNo, [System.Windows.Forms.MessageBoxIcon]::Warning)
     if ($confirm -eq [System.Windows.Forms.DialogResult]::Yes)
