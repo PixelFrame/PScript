@@ -7,12 +7,12 @@ param (
     [string] $Mode
 )
 
-$Etl = $Etl.Replace('[', '``[')
-$Etl = $Etl.Replace(']', '``]')
-$EtlFile = Get-Item $Etl -ErrorAction Suspend
-$TMFPath = $Env:PUBLIC + '\TMF'
 try
 {
+    $Etl = $Etl.Replace('[', '``[')
+    $Etl = $Etl.Replace(']', '``]')
+    $EtlFile = Get-Item $Etl -ErrorAction Stop
+    $TMFPath = $Env:PUBLIC + '\TMF'
     switch ($Mode)
     {
         'TMF'
@@ -34,8 +34,10 @@ try
         'ws-etwdump'
         {
             if (!(Test-Path 'C:\Program Files\Wireshark\extcap\etwdump.exe')) { throw [System.IO.FileNotFoundException] 'etwdump not available' }
-            "C: && cd `"C:\Program Files\Wireshark`"
-            start .\Wireshark.exe -i etwdump -o `"extcap.etwdump.etlfile:$($EtlFile.FullName)`" -k" | Out-File $env:Temp\startws.bat   # Wireshark will exit with console if it is directly called from console, so have to call it from a batch
+            "::" + `
+            "chcp 65001" + `
+            "C: && cd `"C:\Program Files\Wireshark`"" + `
+            "start .\Wireshark.exe -i etwdump -o `"extcap.etwdump.etlfile:$($EtlFile.FullName)`" -k" | Out-File $env:Temp\startws.bat -Encoding utf8 # Wireshark will exit with console if it is directly called from console, so have to call it from a batch
             & $env:Temp\startws.bat
         }
         'Split'
