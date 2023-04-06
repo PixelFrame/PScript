@@ -13,7 +13,11 @@ param (
 
     [Parameter()]
     [string]
-    $TranscriptPath = "$PSScriptRoot\EnableIsatapRouter.log"
+    $TranscriptPath = "$PSScriptRoot\EnableIsatapRouter.log",
+
+    [Parameter()]
+    [string]
+    $DaRoute
 )
 
 if ($Transcript)
@@ -33,7 +37,7 @@ $FailCnt = 0
 while ($FailCnt -lt $MaxRetry)
 {
     $IsatapIf = Get-NetIPInterface -InterfaceAlias $IsatapIfAlias -ErrorAction SilentlyContinue
-    if ($null -eq $IsatapIf -or $Isatap.ConnectionState -ne 'Connected')
+    if ($null -eq $IsatapIf -or $IsatapIf.ConnectionState -ne 'Connected')
     {
         $FailCnt++
         Write-Host "ISATAP interface $IsatapIfAlias not avaliable"
@@ -53,4 +57,5 @@ while ($FailCnt -lt $MaxRetry)
 }
 
 $IsatapIf | Set-NetIPInterface -Forwarding Enabled -Advertising Enabled -AdvertiseDefaultRoute Enabled -PassThru
+New-NetRoute -DestinationPrefix $DaRoute -AddressFamily IPv6 -InterfaceAlias $IsatapIfAlias -Publish Yes
 Write-Host "Completed enabling ISATAP interface advertising and forwarding"
