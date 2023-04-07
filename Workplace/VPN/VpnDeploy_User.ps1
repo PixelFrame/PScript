@@ -2,13 +2,17 @@
 param (
     [Parameter(Mandatory = $true)]
     [string]
-    $ProfileName
+    $ProfileName,
+
+    [Parameter(Mandatory = $true)]
+    [string]
+    $ProfileXMLFile
 )
 
 $ProfileNameEscaped = $ProfileName -replace ' ', '%20'
 
 <#-- Define VPN ProfileXML --#>
-$ProfileXML = Get-Content .\Profile.XML
+$ProfileXML = Get-Content $ProfileXMLFile
 
 <#-- Convert ProfileXML to Escaped Format --#>
 $ProfileXML = $ProfileXML -replace '<', '&lt;'

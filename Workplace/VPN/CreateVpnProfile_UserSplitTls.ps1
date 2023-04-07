@@ -31,7 +31,7 @@ param (
 
     [Parameter()]
     [string]
-    $OutFile = '.\Profile.XML'
+    $OutFile = '.\Profile-User.XML'
 )
 
 $rt = @() 
@@ -52,6 +52,7 @@ $builder = New-ProfileXMLBuilder -Servers $VPNServer `
     -RoutingPolicy SplitTunnel `
     -Authentication $auth `
     -DomainNameInformation $dni0, $dni1 `
+    -DisableClassBasedDefaultRoutes `
     -Routes $rt
 
 $builder | Get-ProfileXML | Tee-Object -FilePath $OutFile
