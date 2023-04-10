@@ -3,20 +3,28 @@
 #region Helper Functions
 function Test-AppAvailability
 {
-    param (
-        [string] $cmdlet
-    )
+  param (
+    [string] $App,
+    [int] $Mode = 0
+  )
+  if ($mode -eq 0)
+  {
     try 
     {
-        Get-Command $cmdlet -ErrorAction Stop | Out-Null
-        return $true
+      Get-Command $cmdlet -ErrorAction Stop | Out-Null
+      return $true
     }
     catch { return $false }
+  }
+  else
+  {
+    return Test-Path($app)
+  }
 }
 #endregion
 
 #region Script Variables
-$Script:Version = '0.0.2-ALPHA'
+$Script:Version = '0.0.3-ALPHA'
 $Script:WinPsProfileDir = "$($env:USERPROFILE)\Documents\WindowsPowerShell"
 $Script:PwshProfileDir = "$($env:USERPROFILE)\Documents\PowerShell"
 $Script:PoshConfig = @'
@@ -153,27 +161,30 @@ Write-Host @'
 #region Install winget
 if (!(Test-AppAvailability winget))
 {
-    if (!(Get-AppxPackage Microsoft.DesktopAppInstaller))
-    {
-        Add-AppxPackage 'https://aka.ms/Microsoft.VCLibs.x64.14.00.Desktop.appx'
+  if (!(Get-AppxPackage Microsoft.DesktopAppInstaller))
+  {
+    Add-AppxPackage 'https://aka.ms/Microsoft.VCLibs.x64.14.00.Desktop.appx'
 
-        $releases_url = "https://api.github.com/repos/microsoft/winget-cli/releases/latest"
-        $releases = Invoke-RestMethod -Uri "$($releases_url)"
-        $latestMsix = ($releases.assets | Where-Object { $_.browser_download_url.EndsWith("msixbundle") } | Select-Object -First 1).browser_download_url
-        try { Add-AppPackage -Path $latestMsix -ErrorAction Stop }
-        catch
-        {
-            $_.Exception.InnerException.Message
-            "Please download and install Microsoft.UI.Xaml manually and try again."
-            exit
-        }
-    }
-    else
+    $releases_url = "https://api.github.com/repos/microsoft/winget-cli/releases/latest"
+    $releases = Invoke-RestMethod -Uri "$($releases_url)"
+    $latestMsix = ($releases.assets | Where-Object { $_.browser_download_url.EndsWith("msixbundle") } | Select-Object -First 1).browser_download_url
+    $latestLicense = ($releases.assets | Where-Object { $_.browser_download_url -Like "*License*.xml" } | Select-Object -First 1).browser_download_url
+    try { Add-ProvisionedAppxPackage -Online -PackagePath $latestMsix -LicensePath $latestLicense -ErrorAction Stop }
+    catch
     {
-        "Appx installation has finished while winget cli is still not available..."
-        "Restart the terminal and try again. If the error continues, try Add-ProvisionedAppxPackage."
-        exit
+      $_.Exception.InnerException.Message
+      "Please download and install Microsoft.UI.Xaml manually and try again."
+      exit
     }
+    "winget installation completed. Restart the terminal to refresh the environment variables."
+    exit
+  }
+  else
+  {
+    "Appx installation has finished while winget cli is still not available..."
+    "Restart the terminal and try again."
+    exit
+  }
 }
 #endregion
 
@@ -181,15 +192,37 @@ if (!(Test-AppAvailability winget))
 Invoke-Expression ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
 #endregion
 
-#region Install git, VSCode, Notepad3, Windows Terminal, pwsh, gsudo
-if (!(Test-AppAvailability git)) { winget install 'Git.Git' -h }
-if (!(Test-AppAvailability code.cmd)) { winget install 'Microsoft.VisualStudioCode' -h }
-choco install 'Notepad3' -y
-if (!(Test-AppAvailability wt)) { winget install 'Microsoft.WindowsTerminal' -h }
-if (!(Test-AppAvailability pwsh)) { winget install 'Microsoft.PowerShell' -h }
-if (!(Test-AppAvailability gsudo)) { winget install 'gerardog.gsudo' -h }
-if (!(Test-AppAvailability oh-my-posh)) { winget install 'JanDeDobbeleer.OhMyPosh' -h }
-if (!(Test-AppAvailability nanazip)) { winget install 'M2Team.NanaZip' -h }
+#region Application Table
+
+class App {
+  [string] $FullName;
+  [int] $Source; # 0: winget, 1: choco, 2: manual
+  [string] $AvailabilityTestString;
+  [int] $AvailabilityTestMode; # 0: Get-Command, 1: Test-Path
+}
+
+$AppTableBase = @()
+$AppTableMedia = @()
+$AppTableCoding = @()
+$AppTableExtra = @()
+
+$AppTableBase += [App]::new('gerardog.gsudo', 0, 'gsudo', 0)
+$AppTableBase += [App]::new('Microsoft.WindowsTerminal', 0, 'wt', 0)
+$AppTableBase += [App]::new('Microsoft.PowerShell', 0, 'pwsh', 0)
+$AppTableBase += [App]::new('JanDeDobbeleer.OhMyPosh', 0, 'oh-my-posh', 0)
+$AppTableBase += [App]::new('M2Team.NanaZip', 0, 'nanazip', 0)
+$AppTableBase += [App]::new('Rizonesoft.Notepad3', 0, 'notepad3', 0)
+$AppTableBase += [App]::new('DuongDieuPhap.ImageGlass', 0, "$env:ProgramFiles/ImageGlass", 1)
+
+$AppTableCoding += [App]::new('Microsoft.VisualStudioCode', 0, 'code.cmd', 0)
+$AppTableCoding += [App]::new('Git.Git', 0, 'git', 0)
+
+$AppTableMedia += [App]::new('CodecGuide.K-LiteCodecPack.Mega', 0, "${env:ProgramFiles(x86)}\K-Lite Codec Pack", 1)
+
+$AppTableExtra += [App]::new('Microsoft.PowerToys', 0, "$env:ProgramFiles/PowerToys", 1)
+#endregion
+
+#region Application Installation
 #endregion
 
 #region Install fonts
@@ -214,6 +247,11 @@ $Utf8WithBom = New-Object System.Text.UTF8Encoding $true
 
 #region Configure Windows Terminal
 $WinTermJson = $env:LOCALAPPDATA + '\Packages\Microsoft.WindowsTerminal_8wekyb3d8bbwe\LocalState\settings.json'
+if (!(Test-Path($WinTermJson)))
+{
+  "Windows Terminal setting file not found. Please run wt once and then run this script again."
+  exit
+}
 $WinTermSetting = ConvertFrom-Json (Get-Content $WinTermJson -Raw)
 $WinTermSetting | Add-Member @{tabWidthMode = 'compact' } -Force
 $WinTermSetting.profiles.defaults | Add-Member @{font = @{face = 'CaskaydiaCove NF' } } -Force
