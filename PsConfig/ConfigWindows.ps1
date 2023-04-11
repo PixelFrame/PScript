@@ -1,5 +1,16 @@
 #requires -RunAsAdministrator
 
+[CmdletBinding()]
+param (
+  [Parameter()]
+  [ValidateSet('Base', 'Coding', 'Media', 'Extra', 'All')]
+  [string[]]
+  $AppSet = 'Base',
+
+  [switch]
+  $SkipProfileConfig
+)
+
 #region Helper Functions
 function Test-AppAvailability
 {
@@ -18,7 +29,7 @@ function Test-AppAvailability
   }
   else
   {
-    return Test-Path($app)
+    return Test-Path($App)
   }
 }
 #endregion
@@ -193,14 +204,15 @@ Invoke-Expression ((New-Object System.Net.WebClient).DownloadString('https://com
 #endregion
 
 #region Application Table
-
-class App {
+class App
+{
   [string] $FullName;
   [int] $Source; # 0: winget, 1: choco, 2: manual
   [string] $AvailabilityTestString;
   [int] $AvailabilityTestMode; # 0: Get-Command, 1: Test-Path
 }
 
+$AppTable = @()
 $AppTableBase = @()
 $AppTableMedia = @()
 $AppTableCoding = @()
@@ -220,9 +232,41 @@ $AppTableCoding += [App]::new('Git.Git', 0, 'git', 0)
 $AppTableMedia += [App]::new('CodecGuide.K-LiteCodecPack.Mega', 0, "${env:ProgramFiles(x86)}\K-Lite Codec Pack", 1)
 
 $AppTableExtra += [App]::new('Microsoft.PowerToys', 0, "$env:ProgramFiles/PowerToys", 1)
+
+if ($AppSet -contains 'All')
+{
+  $AppTable = $AppTableBase + $AppTableCoding + $AppTableMedia + $AppTableExtra
+}
+else
+{
+  $AppTable += $AppTableBase
+  if ($AppSet -contains 'Coding') { $AppTable += $AppTableCoding }
+  if ($AppSet -contains 'Media') { $AppTable += $AppTableMedia }
+  if ($AppSet -contains 'Extra') { $AppTable += $AppTableExtra }
+}
 #endregion
 
 #region Application Installation
+foreach ($App in $AppTable)
+{
+  if ($App.Source -eq 0)
+  {
+    if (!(Test-AppAvailability $App.AvailabilityTestString -Mode $App.AvailabilityTestMode))
+    {
+      "Installing $($App.FullName) from winget"
+      winget install $App.FullName -h
+    }
+  }
+  else
+  {
+    if (!(Test-AppAvailability $App.AvailabilityTestString -Mode $App.AvailabilityTestMode))
+    {
+      "Installing $($App.FullName) from choco"
+      choco install $App.FullName -y
+    }
+  }
+}
+
 #endregion
 
 #region Install fonts
@@ -235,14 +279,17 @@ $Utf8WithoutBom = New-Object System.Text.UTF8Encoding $False
 #endregion
 
 #region Configure PS profile
-if (!(Test-Path $Script:PwshProfileDir )) { New-Item $Script:PwshProfileDir -ItemType Directory | Out-Null }
-if (!(Test-Path $Script:PwshProfileDir\Scripts )) { New-Item $Script:PwshProfileDir\Scripts -ItemType Directory | Out-Null }
-if ((Test-Path $Script:WinPsProfileDir )) { Remove-Item $Script:WinPsProfileDir -Recurse -Force }
-New-Item -Path $Script:WinPsProfileDir -ItemType Junction -Value $Script:PwshProfileDir
-$Utf8WithBom = New-Object System.Text.UTF8Encoding $true
-[System.IO.File]::WriteAllLines("$Script:PwshProfileDir\Microsoft.PowerShell_profile.ps1", $Script:ProfilePs1, $Utf8WithBom)
-'# User Defined Functions' | Out-File "$Script:PwshProfileDir\Scripts\Functions.ps1"
-'# User Defined Aliases' | Out-File "$Script:PwshProfileDir\Scripts\Alias.ps1"
+if (!$SkipProfileConfig)
+{
+  if (!(Test-Path $Script:PwshProfileDir )) { New-Item $Script:PwshProfileDir -ItemType Directory | Out-Null }
+  if (!(Test-Path $Script:PwshProfileDir\Scripts )) { New-Item $Script:PwshProfileDir\Scripts -ItemType Directory | Out-Null }
+  if ((Test-Path $Script:WinPsProfileDir )) { Move-Item -LiteralPath $Script:WinPsProfileDir -Destination $Script:PwshProfileDir\WinPsProfileBackup -Force }
+  New-Item -Path $Script:WinPsProfileDir -ItemType Junction -Value $Script:PwshProfileDir
+  $Utf8WithBom = New-Object System.Text.UTF8Encoding $true
+  [System.IO.File]::WriteAllLines("$Script:PwshProfileDir\Microsoft.PowerShell_profile.ps1", $Script:ProfilePs1, $Utf8WithBom)
+  if (!(Test-Path $Script:PwshProfileDir\Scripts\Functions.ps1 )) { '# User Defined Functions' | Out-File "$Script:PwshProfileDir\Scripts\Functions.ps1" }
+  if (!(Test-Path $Script:PwshProfileDir\Scripts\Alias.ps1 )) { '# User Defined Aliases' | Out-File "$Script:PwshProfileDir\Scripts\Alias.ps1" }
+}
 #endregion
 
 #region Configure Windows Terminal
