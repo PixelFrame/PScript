@@ -1,4 +1,4 @@
-$VpnConn = (Get-VpnConnection -AllUserConnection)[0]
+$VpnConn = Get-VpnConnection -AllUserConnection
 if($null -eq $VpnConn)
 {
     Write-Host "No VPN connection found"
@@ -25,4 +25,4 @@ New-Item -Path HKLM:\SYSTEM\CurrentControlSet\Services\RasMan\DeviceTunnel -Forc
 New-ItemProperty -Path HKLM:\SYSTEM\CurrentControlSet\Services\RasMan\DeviceTunnel -Name "AutoTriggerProfileEntryName" -Value $VpnConn.Name -PropertyType String -Force
 New-ItemProperty -Path HKLM:\SYSTEM\CurrentControlSet\Services\RasMan\DeviceTunnel -Name "AutoTriggerProfilePhonebookPath" -Value "C:\ProgramData\Microsoft\Network\Connections\Pbk\rasphone.pbk" -PropertyType String -Force
 New-ItemProperty -Path HKLM:\SYSTEM\CurrentControlSet\Services\RasMan\DeviceTunnel -Name "UserSID" -Value "S-1-5-80" -PropertyType String -Force
-New-ItemProperty -Path HKLM:\SYSTEM\CurrentControlSet\Services\RasMan\DeviceTunnel -Name "AutoTriggerProfileGUID" -Value ([Guid](Get-VpnConnection -AllUserConnection).Guid).ToByteArray() -PropertyType Binary -Force
+New-ItemProperty -Path HKLM:\SYSTEM\CurrentControlSet\Services\RasMan\DeviceTunnel -Name "AutoTriggerProfileGUID" -Value ([Guid]$VpnConn.Guid).ToByteArray() -PropertyType Binary -Force
