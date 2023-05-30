@@ -59,7 +59,7 @@ Invoke-Expression -Command $cmd
 
 $fileList = ''
 Get-ChildItem .\* | ForEach-Object { $fileList += "'$($_.FullName)' " }
-$cmd = "7z.exe a -tzip -mx=7 -r '$OutputPath\$($archive.BaseName)' $fileList"
+$cmd = "7z.exe a -tzip -mx=7 '$OutputPath\$($archive.BaseName)' $fileList"
 Write-Host "Invoke command: $cmd" -BackgroundColor Green -ForegroundColor White
 Invoke-Expression -Command $cmd
 
