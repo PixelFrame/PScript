@@ -22,7 +22,7 @@ function Test-AppAvailability
   {
     try 
     {
-      Get-Command $cmdlet -ErrorAction Stop | Out-Null
+      Get-Command $App -ErrorAction Stop | Out-Null
       return $true
     }
     catch { return $false }
@@ -35,7 +35,7 @@ function Test-AppAvailability
 #endregion
 
 #region Script Variables
-$Script:Version = '0.0.3-ALPHA'
+$Script:Version = '0.0.4-ALPHA'
 $Script:WinPsProfileDir = "$($env:USERPROFILE)\Documents\WindowsPowerShell"
 $Script:PwshProfileDir = "$($env:USERPROFILE)\Documents\PowerShell"
 $Script:PoshConfig = @'
@@ -200,12 +200,27 @@ if (!(Test-AppAvailability winget))
 #endregion
 
 #region Install Chocolatey
-Invoke-Expression ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
+if (!(Test-AppAvailability choco))
+{
+  Invoke-Expression ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
+}
 #endregion
 
 #region Application Table
 class App
 {
+  App (
+    [string] $FullName,
+    [int] $Source,
+    [string] $AvailabilityTestString,
+    [int] $AvailabilityTestMode
+  )
+  {
+    $this.FullName = $FullName
+    $this.Source = $Source
+    $this.AvailabilityTestString = $AvailabilityTestString
+    $this.AvailabilityTestMode = $AvailabilityTestMode
+  }
   [string] $FullName;
   [int] $Source; # 0: winget, 1: choco, 2: manual
   [string] $AvailabilityTestString;
@@ -283,8 +298,11 @@ if (!$SkipProfileConfig)
 {
   if (!(Test-Path $Script:PwshProfileDir )) { New-Item $Script:PwshProfileDir -ItemType Directory | Out-Null }
   if (!(Test-Path $Script:PwshProfileDir\Scripts )) { New-Item $Script:PwshProfileDir\Scripts -ItemType Directory | Out-Null }
-  if ((Test-Path $Script:WinPsProfileDir )) { Move-Item -LiteralPath $Script:WinPsProfileDir -Destination $Script:PwshProfileDir\WinPsProfileBackup -Force }
-  New-Item -Path $Script:WinPsProfileDir -ItemType Junction -Value $Script:PwshProfileDir
+  if ((Get-Item $Script:WinPsProfileDir).LinkType -ne 'Junction')
+  {
+    if ((Test-Path $Script:WinPsProfileDir )) { Move-Item -LiteralPath $Script:WinPsProfileDir -Destination $Script:PwshProfileDir\WinPsProfileBackup -Force }
+    New-Item -Path $Script:WinPsProfileDir -ItemType Junction -Value $Script:PwshProfileDir
+  }
   $Utf8WithBom = New-Object System.Text.UTF8Encoding $true
   [System.IO.File]::WriteAllLines("$Script:PwshProfileDir\Microsoft.PowerShell_profile.ps1", $Script:ProfilePs1, $Utf8WithBom)
   if (!(Test-Path $Script:PwshProfileDir\Scripts\Functions.ps1 )) { '# User Defined Functions' | Out-File "$Script:PwshProfileDir\Scripts\Functions.ps1" }
