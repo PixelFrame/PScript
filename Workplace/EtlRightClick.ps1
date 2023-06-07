@@ -264,8 +264,8 @@ function Get-LatestRelease
 
     try
     {
-        $E2PResponse = Invoke-WebRequest -Uri $E2PApiUri -ErrorAction Stop
-        $E2PDownloadUrl = (($E2PResponse.Content | ConvertFrom-Json).assets | Where-Object { $_.name -eq 'etl2pcapng.zip' })[0].browser_download_url
+        $E2PResponse = Invoke-RestMethod -Uri $E2PApiUri -ErrorAction Stop
+        $E2PDownloadUrl = ($E2PResponse.assets | Where-Object { $_.name -eq 'etl2pcapng.exe' } | Select-Object -First 1).browser_download_url
     }
     catch
     {
@@ -276,8 +276,8 @@ function Get-LatestRelease
 
     try
     {
-        $ESResponse = Invoke-WebRequest -Uri $ESApiUri -ErrorAction Stop
-        $ESDownloadUrl = (($ESResponse.Content | ConvertFrom-Json).assets | Where-Object { $_.name -eq 'ETWSplitter.exe' })[0].browser_download_url
+        $ESResponse = Invoke-RestMethod -Uri $ESApiUri -ErrorAction Stop
+        $ESDownloadUrl = ($ESResponse.assets | Where-Object { $_.name -eq 'ETWSplitter.exe' } | Select-Object -First 1).browser_download_url
     }
     catch
     {
@@ -335,7 +335,7 @@ function Write-Bin
         Do
         {
             $AttemptCount++
-            "Downloading $FileName @ $AttemptCount"
+            "Downloading $FileName, attempt: $AttemptCount"
             try
             {
                 $WebClient.DownloadFile($Uri, $DestPath)
@@ -348,18 +348,15 @@ function Write-Bin
         } while (!(Test-Path $DestPath) -and ($AttemptCount -lt $Retry))
     }
 
-    if ((Test-Path ~\EtwSplitter.exe) -and (Test-Path ~\etl2pcapng.zip))
+    if ((Test-Path ~\EtwSplitter.exe) -and (Test-Path ~\etl2pcapng.exe))
     {
         Move-Item -Path ~\EtwSplitter.exe -Destination $StubPath\EtwSplitter.exe -Force
-        Expand-Archive -Path ~\etl2pcapng.zip -DestinationPath ~\
-        Move-Item -Path ~\etl2pcapng\x64\etl2pcapng.exe -Destination $StubPath\etl2pcapng.exe -Force
+        Move-Item -Path ~\etl2pcapng.exe -Destination $StubPath\etl2pcapng.exe -Force
     }
     else
     {
         "Download Failed! Please manually download etl2pcapng and ETWSplitter and move them to environment PATH"
     }
-    Remove-Item -Path ~\etl2pcapng.zip -Force -ErrorAction SilentlyContinue
-    Remove-Item -Path ~\etl2pcapng -Recurse -Force -ErrorAction SilentlyContinue
 }
 
 ## START OF SCRIPT ##
