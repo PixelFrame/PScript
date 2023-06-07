@@ -215,10 +215,10 @@ try
         'ws-etwdump'
         {
             if (!(Test-Path 'C:\Program Files\Wireshark\extcap\etwdump.exe')) { throw [System.IO.FileNotFoundException] 'etwdump not available' }
-            "::" + `
-            "chcp 65001" + `
-            "C: && cd `"C:\Program Files\Wireshark`"" + `
-            "start .\Wireshark.exe -i etwdump -o `"extcap.etwdump.etlfile:`$(`$EtlFile.FullName)`" -k" | Out-File `$env:Temp\startws.bat -Encoding utf8 # Wireshark will exit with console if it is directly called from console, so have to call it from a batch
+"::
+chcp 65001
+C: && cd `"`"C:\Program Files\Wireshark`"`"
+start .\Wireshark.exe -i etwdump -o `"`"extcap.etwdump.etlfile:`$(`$EtlFile.FullName)`"`" -k" | Out-File `$env:Temp\startws.bat -Encoding utf8 # Wireshark will exit with console if it is directly called from console, so have to call it from a batch
             & `$env:Temp\startws.bat
         }
         'Split'
