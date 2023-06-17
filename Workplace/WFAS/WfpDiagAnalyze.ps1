@@ -95,6 +95,28 @@ function TranslateConditionValue
     }
 }
 
+$NetProfileMapping = @{
+    '0' = 'Public';
+    '1' = 'Private';
+    '2' = 'Domain';
+}
+
+$MatchTypeMapping = @{
+    'FWP_MATCH_EQUAL' = '==';
+    'FWP_MATCH_GREATER' = '>';
+    'FWP_MATCH_LESS' = '<';
+    'FWP_MATCH_GREATER_OR_EQUAL' = '>=';
+    'FWP_MATCH_LESS_OR_EQUAL' = '<='; 
+    'FWP_MATCH_RANGE' = 'In Range';
+    'FWP_MATCH_FLAGS_ALL_SET' = 'All Flags Set'; 
+    'FWP_MATCH_FLAGS_ANY_SET' = 'Any Flag Set';
+    'FWP_MATCH_FLAGS_NONE_SET' = 'No Flag Set';
+    'FWP_MATCH_EQUAL_CASE_INSENSITIVE' = '== (Case Insensitive)';
+    'FWP_MATCH_NOT_EQUAL' = '!=';
+    'FWP_MATCH_PREFIX' = 'Prefix';
+    'FWP_MATCH_NOT_PREFIX' = 'Not Prefix';
+}
+
 #endregion Helper Functions
 
 # Load XML
@@ -103,7 +125,7 @@ $xmlobj = [XML] (Get-Content -LiteralPath $WfpDiagXmlPath -Raw)
 # Drop Events
 $cnt = 0
 $dropObj = @()
-$drop = $xmlobj.wfpdiag.events.netEvent | Where-Object { $_.type -eq 'FWPM_NET_EVENT_TYPE_CLASSIFY_DROP' }
+$drop = $xmlobj.wfpdiag.events.netEvent | Where-Object { $_.type -like '*CLASSIFY_DROP' }  # It appears new OS version uses 'FWPM_NET_EVENT_TYPE_PUBLIC_CLASSIFY_DROP' instead of 'FWPM_NET_EVENT_TYPE_CLASSIFY_DROP' now
 foreach ($d in $drop)
 {
     $cnt++
@@ -122,7 +144,8 @@ foreach ($d in $drop)
         PackageSid      = $d.header.packageSid;
         FilterId        = $d.classifyDrop.filterId;
         Direction       = $d.classifyDrop.msFwpDirection;
-        OriginalProfile = $d.classifyDrop.originalProfile;
+        OriginalProfile = $NetProfileMapping[$d.classifyDrop.originalProfile];
+        CurrentProfile  = $NetProfileMapping[$d.classifyDrop.currentProfile];
     }
 }
 
@@ -140,23 +163,32 @@ foreach ($f in $initFilters)
         Description = $f.displayData.description;
         Flags       = $f.flags.item -join [Environment]::NewLine;
         ProviderKey = $f.providerKey;
-        Condition   = ($f.filterCondition.item | ForEach-Object { $_.fieldKey + ' ' + $_.matchType + ' ' + (TranslateConditionValue $_.conditionValue) }) -join [Environment]::NewLine;
+        Condition   = ($f.filterCondition.item | 
+            ForEach-Object { 
+                if($null -ne $_)
+                { $_.fieldKey.SubString(15) + ' ' + $MatchTypeMapping[$_.matchType] + ' ' + (TranslateConditionValue $_.conditionValue) }
+            }) -join [Environment]::NewLine;
     }
 }
+
 
 $cnt = 0
 $addedFilters = $xmlobj.wfpdiag.events.filterChange.filter
 foreach ($f in $addedFilters)
 {
     $cnt++
-    Write-Progress -Activity 'Parsing Final Filters' -Status "$cnt/$($addedFilters.Count)" -PercentComplete ($cnt / $addedFilters.Count * 100)
+    Write-Progress -Activity 'Parsing Added Filters' -Status "$cnt/$($addedFilters.Count)" -PercentComplete ($cnt / $addedFilters.Count * 100)
     $fltObj += [PSCustomObject]@{
         Id          = $f.filterId;
         Name        = $f.displayData.name;
         Description = $f.displayData.description;
         Flags       = $f.flags.item -join [Environment]::NewLine;
         ProviderKey = $f.providerKey;
-        Condition   = ($f.filterCondition.item | ForEach-Object { $_.fieldKey + ' ' + $_.matchType + ' ' + (TranslateConditionValue $_.conditionValue) }) -join [Environment]::NewLine;
+        Condition   = ($f.filterCondition.item | 
+            ForEach-Object { 
+                if($null -ne $_)
+                { $_.fieldKey.SubString(15) + ' ' + $MatchTypeMapping[$_.matchType] + ' ' + (TranslateConditionValue $_.conditionValue) }
+            }) -join [Environment]::NewLine;
     }
 }
 
