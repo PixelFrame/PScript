@@ -14,49 +14,10 @@ function ReadUnicodeHexString
         [string]
         $HexString
     )
-    $arr = StringToByteArray $HexString;
-    if ($null -eq $arr) { return $null; }
+    if ([string]::IsNullOrEmpty($HexString)) { return $null; }
+    $arr = [byte[]] -split ($HexString -replace '..', '0x$& ')
     $str = [System.Text.Encoding]::Unicode.GetString($arr);
     return $str;
-}
-
-function StringToByteArray
-{
-    [CmdletBinding()]
-    param (
-        [Parameter()]
-        [string]
-        $HexString
-    )
-    if ($HexString.Length % 2 -eq 1) { return $null; }
-    try
-    {
-        $arr = New-Object byte[] -ArgumentList ($HexString.Length -shr 1);
-        for ($i = 0; $i -lt ($HexString.Length -shr 1); ++$i)
-        {
-            $arr[$i] = [byte](((GetHexVal($HexString[$i -shl 1])) -shl 4) + (GetHexVal($HexString[($i -shl 1) + 1])));
-        }
-    }
-    catch
-    {
-        return $null
-    }
-    return $arr;
-}
-
-function GetHexVal
-{
-    [CmdletBinding()]
-    param (
-        [Parameter()]
-        [char]
-        $hex
-    )
-    $val = [int] $hex;
-    if ($val -lt 58) { $val -= 48 }
-    elseif ($val -lt 97) { $val -= 55 }
-    else { $val -= 87 }
-    return $val;
 }
 
 function TranslateConditionValue
