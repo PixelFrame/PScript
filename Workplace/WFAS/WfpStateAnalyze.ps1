@@ -57,9 +57,10 @@ function TranslateConditionValue
 }
 
 $NetProfileMapping = @{
-    '0' = 'Public';
-    '1' = 'Private';
-    '2' = 'Domain';
+    '0' = 'Any';
+    '1' = 'Public';
+    '2' = 'Private';
+    '3' = 'Domain';
 }
 
 $MatchTypeMapping = @{
