@@ -95,12 +95,16 @@ foreach ($f in $filters)
     $cnt++
     Write-Progress -Activity 'Parsing Filters' -Status "$cnt/$($filters.Count)" -PercentComplete ($cnt / $filters.Count * 100)
     $fltObj += [PSCustomObject]@{
-        Id          = $f.filterId;
-        Name        = $f.displayData.name;
-        Description = $f.displayData.description;
-        Flags       = $f.flags.item -join [Environment]::NewLine;
-        ProviderKey = $f.providerKey;
-        Condition   = ($f.filterCondition.item | 
+        Id              = $f.filterId;
+        Name            = $f.displayData.name;
+        Description     = $f.displayData.description;
+        Action          = $f.action.type;
+        Callout         = $f.action.filterType;
+        Layer           = $f.layerKey
+        EffectiveWeight = $f.effectiveWeight.uint64;
+        Flags           = $f.flags.item -join [Environment]::NewLine;
+        ProviderKey     = $f.providerKey;
+        Condition       = ($f.filterCondition.item | 
             ForEach-Object { 
                 if ($null -ne $_)
                 { $_.fieldKey.SubString(15) + ' ' + $MatchTypeMapping[$_.matchType] + ' ' + (TranslateConditionValue $_.conditionValue) }

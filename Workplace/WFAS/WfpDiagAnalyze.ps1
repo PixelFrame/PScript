@@ -65,19 +65,19 @@ $NetProfileMapping = @{
 }
 
 $MatchTypeMapping = @{
-    'FWP_MATCH_EQUAL' = '==';
-    'FWP_MATCH_GREATER' = '>';
-    'FWP_MATCH_LESS' = '<';
-    'FWP_MATCH_GREATER_OR_EQUAL' = '>=';
-    'FWP_MATCH_LESS_OR_EQUAL' = '<='; 
-    'FWP_MATCH_RANGE' = 'In Range';
-    'FWP_MATCH_FLAGS_ALL_SET' = 'All Flags Set'; 
-    'FWP_MATCH_FLAGS_ANY_SET' = 'Any Flag Set';
-    'FWP_MATCH_FLAGS_NONE_SET' = 'No Flag Set';
+    'FWP_MATCH_EQUAL'                  = '==';
+    'FWP_MATCH_GREATER'                = '>';
+    'FWP_MATCH_LESS'                   = '<';
+    'FWP_MATCH_GREATER_OR_EQUAL'       = '>=';
+    'FWP_MATCH_LESS_OR_EQUAL'          = '<='; 
+    'FWP_MATCH_RANGE'                  = 'In Range';
+    'FWP_MATCH_FLAGS_ALL_SET'          = 'All Flags Set'; 
+    'FWP_MATCH_FLAGS_ANY_SET'          = 'Any Flag Set';
+    'FWP_MATCH_FLAGS_NONE_SET'         = 'No Flag Set';
     'FWP_MATCH_EQUAL_CASE_INSENSITIVE' = '== (Case Insensitive)';
-    'FWP_MATCH_NOT_EQUAL' = '!=';
-    'FWP_MATCH_PREFIX' = 'Prefix';
-    'FWP_MATCH_NOT_PREFIX' = 'Not Prefix';
+    'FWP_MATCH_NOT_EQUAL'              = '!=';
+    'FWP_MATCH_PREFIX'                 = 'Prefix';
+    'FWP_MATCH_NOT_PREFIX'             = 'Not Prefix';
 }
 
 #endregion Helper Functions
@@ -121,14 +121,18 @@ foreach ($f in $initFilters)
     $cnt++
     Write-Progress -Activity 'Parsing Initial Filters' -Status "$cnt/$($initFilters.Count)" -PercentComplete ($cnt / $initFilters.Count * 100)
     $fltObj += [PSCustomObject]@{
-        Id          = $f.filterId;
-        Name        = $f.displayData.name;
-        Description = $f.displayData.description;
-        Flags       = $f.flags.item -join [Environment]::NewLine;
-        ProviderKey = $f.providerKey;
-        Condition   = ($f.filterCondition.item | 
+        Id              = $f.filterId;
+        Name            = $f.displayData.name;
+        Description     = $f.displayData.description;
+        Action          = $f.action.type;
+        Callout         = $f.action.filterType;
+        Layer           = $f.layerKey
+        EffectiveWeight = $f.effectiveWeight.uint64;
+        Flags           = $f.flags.item -join [Environment]::NewLine;
+        ProviderKey     = $f.providerKey;
+        Condition       = ($f.filterCondition.item | 
             ForEach-Object { 
-                if($null -ne $_)
+                if ($null -ne $_)
                 { $_.fieldKey.SubString(15) + ' ' + $MatchTypeMapping[$_.matchType] + ' ' + (TranslateConditionValue $_.conditionValue) }
             }) -join [Environment]::NewLine;
     }
@@ -142,14 +146,18 @@ foreach ($f in $addedFilters)
     $cnt++
     Write-Progress -Activity 'Parsing Added Filters' -Status "$cnt/$($addedFilters.Count)" -PercentComplete ($cnt / $addedFilters.Count * 100)
     $fltObj += [PSCustomObject]@{
-        Id          = $f.filterId;
-        Name        = $f.displayData.name;
-        Description = $f.displayData.description;
-        Flags       = $f.flags.item -join [Environment]::NewLine;
-        ProviderKey = $f.providerKey;
-        Condition   = ($f.filterCondition.item | 
+        Id              = $f.filterId;
+        Name            = $f.displayData.name;
+        Description     = $f.displayData.description;
+        Action          = $f.action.type;
+        Callout         = $f.action.filterType;
+        Layer           = $f.layerKey
+        EffectiveWeight = $f.effectiveWeight.uint64;
+        Flags           = $f.flags.item -join [Environment]::NewLine;
+        ProviderKey     = $f.providerKey;
+        Condition       = ($f.filterCondition.item | 
             ForEach-Object { 
-                if($null -ne $_)
+                if ($null -ne $_)
                 { $_.fieldKey.SubString(15) + ' ' + $MatchTypeMapping[$_.matchType] + ' ' + (TranslateConditionValue $_.conditionValue) }
             }) -join [Environment]::NewLine;
     }
