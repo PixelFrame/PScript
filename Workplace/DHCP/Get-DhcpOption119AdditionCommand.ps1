@@ -40,8 +40,9 @@ foreach ($name in $SearchList)
         $check = CheckTable -suffix $suffix -index $index
         if (!$NoCompression -and $check -ge 0)
         {
-            $result += 0xC0
-            $result += $check
+            $ptr = 0xC000 -bor $check
+            $result += ($ptr -band 0xFF00) -shr 8
+            $result += $ptr -band 0x00FF
             $index += 2
             break
         }
@@ -50,7 +51,7 @@ foreach ($name in $SearchList)
             if ($suffix.Contains('.'))
             {
                 $seg = $suffix.Substring(0, $suffix.IndexOf('.'))
-                if ($seg.Length -gt 255)
+                if ($seg.Length -gt 0x3F)
                 {
                     throw "Invalid domain name `"$seg`""
                 }
@@ -61,7 +62,7 @@ foreach ($name in $SearchList)
             }
             else
             {
-                if ($suffix.Length -gt 255)
+                if ($suffix.Length -gt 0x3F)
                 {
                     throw "Invalid domain name `"$suffix`""
                 }
