@@ -5,19 +5,26 @@ param (
     $Url = 'https://www.example.com/',
 
     [switch]
-    $ResetAutoProxy,
+    $DownloadPacScript,
 
     [switch]
-    $SaveScript,
+    $IncludeSavedLegacySettings,
+
+    [switch]
+    $IncludeVPN,
 
     [switch]
     $IncludeWOW64,
+
+    [switch]
+    $IncludeEnv,
 
     [string]
     $PacUrl
 )
 
-# WinHTTP P/Invoke C# Def
+#region P/Invoke
+
 $Win32CallDef = @'
     using System;
     using System.Collections.Generic;
@@ -203,6 +210,10 @@ $Win32CallDef = @'
 
 Add-Type -TypeDefinition $Win32CallDef -ErrorAction Stop
 
+#endregion
+
+#region Functions
+
 function PrintProxyInfo
 {
     param (
@@ -226,6 +237,33 @@ function PrintIEProxyConfig
     Write-Host ("    Auto Config URL : {0}" -f $IEProxyConfig.lpszAutoConfigUrl )
     Write-Host ("    Proxy Server    : {0}" -f $IEProxyConfig.lpszProxy )
     Write-Host ("    Bypass List     : {0}" -f $IEProxyConfig.lpszProxyBypass )
+}
+
+function PrintIERegs
+{
+    param (
+        $IERegData
+    )
+
+    if ($IERegData.Length -eq 0)
+    {
+        Write-Host ('        No Registry Setting Found' + [System.Environment]::NewLine) -ForegroundColor Red
+    }
+    else
+    {
+        foreach ($IEReg in $IERegData)
+        {
+            Write-Host ('        ' + $IEReg.Path) -ForegroundColor Cyan
+            $__ = (ConvertFrom-ProxySettingsBinary $IEReg.Data).Split([System.Environment]::NewLine)
+            $output = ''
+            foreach ($l in $__)
+            {
+                $output += '            ' + $l + [System.Environment]::NewLine
+            }
+            Write-Host $output
+        }
+    }
+    
 }
 
 function Get-SubArray
@@ -280,7 +318,7 @@ function ConvertFrom-ProxySettingsBinary
         $ProxySettings
     )
 
-    $Output = ''
+    $Output = @()
 
     if ($ProxySettings.Count -gt 0)
     {
@@ -291,36 +329,36 @@ function ConvertFrom-ProxySettingsBinary
         }
 
         $ProxySettingVersion = Convert-BytesToUInt32 -Bytes (Get-SubArray -Source $ProxySettings -StartIndex 4 -Length 4) -IsBigEndian $false
-        Write-Host "    Proxy setting version         : $ProxySettingVersion"
+        $Output += "Proxy setting version         : $ProxySettingVersion"
 
         # Figure out the proxy settings that are enabled
         $proxyBits = $ProxySettings[8]
 
         if (($proxyBits -band 0x2) -gt 0)
         {
-            Write-Host "    Manual Proxy                  : True"
+            $Output += "Manual Proxy                  : True"
         }
         else
         {
-            Write-Host "    Manual Proxy                  : False"
+            $Output += "Manual Proxy                  : False"
         }
 
         if (($proxyBits -band 0x4) -gt 0)
         {
-            Write-Host "    Auto Configuration URL (PAC)  : True"
+            $Output += "Auto Configuration URL (PAC)  : True"
         }
         else
         {
-            Write-Host "    Auto Configuration URL (PAC)  : False"
+            $Output += "Auto Configuration URL (PAC)  : False"
         }
 
         if (($proxyBits -band 0x8) -gt 0)
         {
-            Write-Host "    Auto Detection                : True"
+            $Output += "Auto Detection                : True"
         }
         else
         {
-            Write-Host "    Auto Detection                : False"
+            $Output += "Auto Detection                : False"
         }
 
         $stringPointer = 12
@@ -328,7 +366,7 @@ function ConvertFrom-ProxySettingsBinary
         # Extract the Proxy Server string
         $proxyServer = ''
         $stringLength = Convert-BytesToUInt32 -Bytes (Get-SubArray -Source $ProxySettings -StartIndex $stringPointer -Length 4) -IsBigEndian $false
-        Write-Host "    Proxy server string length    : $stringLength"
+        $Output += "Proxy server string length    : $stringLength"
         $stringPointer += 4
 
         if ($stringLength -gt 0)
@@ -336,13 +374,13 @@ function ConvertFrom-ProxySettingsBinary
             $stringBytes = New-Object -TypeName Byte[] -ArgumentList $stringLength
             $null = [System.Buffer]::BlockCopy($ProxySettings, $stringPointer, $stringBytes, 0, $stringLength)
             $proxyServer = [System.Text.Encoding]::ASCII.GetString($stringBytes)
-            Write-Host "    Proxy server string           : $proxyServer"
+            $Output += "Proxy server string           : $proxyServer"
             $stringPointer += $stringLength
         }
 
         # Extract the Proxy Server Exceptions string
         $stringLength = Convert-BytesToUInt32 -Bytes (Get-SubArray -Source $ProxySettings -StartIndex $stringPointer -Length 4) -IsBigEndian $false
-        Write-Host "    Bypass list string length     : $stringLength"
+        $Output += "Bypass list string length     : $stringLength"
         $stringPointer += 4
 
         if ($stringLength -gt 0)
@@ -350,14 +388,14 @@ function ConvertFrom-ProxySettingsBinary
             $stringBytes = New-Object -TypeName Byte[] -ArgumentList $stringLength
             $null = [System.Buffer]::BlockCopy($ProxySettings, $stringPointer, $stringBytes, 0, $stringLength)
             $proxyServerExceptionsString = [System.Text.Encoding]::ASCII.GetString($stringBytes)
-            Write-Host "    Bypass list string            : $proxyServerExceptionsString"
+            $Output += "Bypass list string            : $proxyServerExceptionsString"
             $stringPointer += $stringLength
         }
 
         # Extract the Auto Config URL string
         $autoConfigURL = ''
         $stringLength = Convert-BytesToUInt32 -Bytes (Get-SubArray -Source $ProxySettings -StartIndex $stringPointer -Length 4) -IsBigEndian $false
-        Write-Host "    Auto Config URL string length : $stringLength"
+        $Output += "Auto Config URL string length : $stringLength"
         $stringPointer += 4
 
         if ($stringLength -gt 0)
@@ -365,27 +403,28 @@ function ConvertFrom-ProxySettingsBinary
             $stringBytes = New-Object -TypeName Byte[] -ArgumentList $stringLength
             $null = [System.Buffer]::BlockCopy($ProxySettings, $stringPointer, $stringBytes, 0, $stringLength)
             $autoConfigURL = [System.Text.Encoding]::ASCII.GetString($stringBytes)
-            Write-Host "    Auto Config URL string        : $autoConfigURL"
+            $Output += "Auto Config URL string        : $autoConfigURL"
             $stringPointer += $stringLength
         }
     }
     return $Output
 }
 
-if ($ResetAutoProxy)
+#endregion
+
+#region WinHTTP | API | ResetAutoProxy
+
+$SessionHandle = [WinHttp]::WinHttpOpen("PINVOKE WINHTTP CLIENT/1.0", [AccessType]::WINHTTP_ACCESS_TYPE_NO_PROXY, "", "", 0);
+$ResetResult = [WinHttp]::WinHttpResetAutoProxy($SessionHandle, [ResetFlag]::WINHTTP_RESET_ALL -bor [ResetFlag]::WINHTTP_RESET_OUT_OF_PROC)
+if ($ResetResult -ne 0)
 {
-    $SessionHandle = [WinHttp]::WinHttpOpen("PINVOKE WINHTTP CLIENT/1.0", [AccessType]::WINHTTP_ACCESS_TYPE_NO_PROXY, "", "", 0);
-    $ResetResult = [WinHttp]::WinHttpResetAutoProxy($SessionHandle, [ResetFlag]::WINHTTP_RESET_ALL -bor [ResetFlag]::WINHTTP_RESET_OUT_OF_PROC)
-    if ($ResetResult -eq 0)
-    {
-        "Reset Successfully"
-    }
-    else
-    {
-        "Reset Failed: $ResetResult"
-    }
-    [WinHttp]::WinHttpCloseHandle($SessionHandle) | Out-Null
+    "Auto Proxy Reset Failed: $ResetResult"
 }
+[WinHttp]::WinHttpCloseHandle($SessionHandle) | Out-Null
+
+#endregion
+
+#region WinINET | API | CurrentUser
 
 Write-Host "`nWinINET Proxy in Use" -ForegroundColor Blue
 $IEProxyConfig = New-Object WINHTTP_CURRENT_USER_IE_PROXY_CONFIG
@@ -395,7 +434,7 @@ if ([WinHttp]::WinHttpGetIEProxyConfigForCurrentUser([ref] $IEProxyConfig))
     PrintIEProxyConfig $IEProxyConfig
     $IEPacAddr = $IEProxyConfig.lpszAutoConfigUrl
 
-    if ($SaveScript -and $IEPacAddr.Length -gt 0)
+    if ($DownloadPacScript -and $IEPacAddr.Length -gt 0)
     {
         Write-Host "    Downloading Script..." -ForegroundColor Green
         try
@@ -406,7 +445,6 @@ if ([WinHttp]::WinHttpGetIEProxyConfigForCurrentUser([ref] $IEProxyConfig))
         catch
         {
             Write-Host "    Failed to download script file" -ForegroundColor Red
-            $Error[0]
         }
     }
 }
@@ -415,6 +453,10 @@ else
     $ErrorCode = [System.Runtime.InteropServices.Marshal]::GetLastWin32Error()
     "    Win32 Call: WinHttpGetIEProxyConfigForCurrentUser Failed. Error Code: $ErrorCode ($([WinHTTP]::ErrorMessage[$ErrorCode]))`n"
 }
+
+#endregion
+
+#region WinINET | REG | Proxy Setting Per User
 
 Write-Host "`nWinINET Proxy Per User or Per Machine?" -ForegroundColor Blue
 try 
@@ -434,6 +476,10 @@ else
     Write-Host "    Per User" -ForegroundColor Green
 }
 
+#endregion
+
+#region WinINET | REG | AllUsers
+
 Write-Host "`nWinINET Proxies in Registry" -ForegroundColor Blue
 $Keyx64 = '\SOFTWARE\Microsoft\Windows\CurrentVersion\Internet Settings\Connections'
 $Keyx86 = '\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Internet Settings\Connections'
@@ -441,66 +487,188 @@ if (!(Test-Path HKU:\)) { New-PSDrive -PSProvider Registry -Name HKU -Root HKEY_
 $UserHives = (Get-ChildItem HKU:\ -ErrorAction SilentlyContinue).Name.Replace('HKEY_USERS', 'HKU:') | Where-Object { $_ -notlike '*_Classes' }
 foreach ($Hive in $UserHives)
 {
-    try
+    $Username = $Hive.SubString(5)
+    if ($Username -like 'S-1-5*') { $Username = Convert-SidToUsername $Username }
+    Write-Host "    WinINET Registry of User $Username" -ForegroundColor Cyan
+    $UserRegs = @()
+    $Pathx64 = $Hive + $Keyx64
+    $Pathx86 = $Hive + $Keyx86
+    if (Test-Path $Pathx64)
     {
-        $Username = $Hive.SubString(5)
-        if ($Username -like 'S-1-5*') { $Username = Convert-SidToUsername $Username }
-        $Pathx64 = $Hive + $Keyx64
-        Write-Host "    DefaultConnectionSettings of User $Username" -ForegroundColor Cyan
-        Write-Host "    $Pathx64" -ForegroundColor Cyan
-        $DefConn = Get-ItemPropertyValue -Path $Pathx64 -Name DefaultConnectionSettings -ErrorAction Stop
-        ConvertFrom-ProxySettingsBinary $DefConn
-    }
-    catch
-    {
-        Write-Host "    Proxy settings not existing or insufficient permission`n"
-    }
-    if ($IncludeWOW64)
-    {
-        try
+        try { $Data = Get-ItemPropertyValue -Path $Pathx64 -Name 'DefaultConnectionSettings' -ErrorAction Stop } catch { $Data = $null }
+        if ($null -ne $Data) 
         {
-            $Username = $Hive.SubString(5)
-            if ($Username -like 'S-1-5*') { $Username = Convert-SidToUsername $Username }
-            $Pathx86 = $Hive + $Keyx86
-            Write-Host "    DefaultConnectionSettings of User $Username" -ForegroundColor DarkCyan
-            Write-Host "    $Pathx86" -ForegroundColor DarkCyan
-            $DefConn = Get-ItemPropertyValue -Path $Pathx86 -Name DefaultConnectionSettings -ErrorAction Stop
-            ConvertFrom-ProxySettingsBinary $DefConn
+            $UserRegs += @{
+                Path = $Pathx64 + '\DefaultConnectionSettings'
+                Data = $Data
+            }
         }
-        catch
+
+        if ($IncludeSavedLegacySettings)
         {
-            Write-Host "    Proxy settings not existing or insufficient permission`n"
+            try { $Data = Get-ItemPropertyValue -Path $Pathx64 -Name 'SavedLegacySettings' -ErrorAction Stop } catch { $Data = $null }
+            if ($null -ne $Data) 
+            {
+                $UserRegs += @{
+                    Path = $Pathx64 + '\SavedLegacySettings'
+                    Data = $Data
+                }
+            }
+        }
+
+        if ($IncludeVPN)
+        {
+            $Conns = (Get-Item $Pathx64).Property | Where-Object { $_ -notin @('DefaultConnectionSettings', 'SavedLegacySettings') }
+            foreach ($Conn in $Conns)
+            {
+                try { $Data = Get-ItemPropertyValue -Path $Pathx64 -Name $Conn -ErrorAction Stop } catch { $Data = $null }
+                if ($null -ne $Data) 
+                {
+                    $UserRegs += @{
+                        Path = $Pathx64 + '\' + $Conn
+                        Data = $Data
+                    }
+                }
+            }
         }
     }
-}
-try
-{
-    $Pathx64 = 'HKLM:' + $Keyx64
-    Write-Host "    DefaultConnectionSettings of Machine" -ForegroundColor Cyan
-    Write-Host "    $Pathx64" -ForegroundColor Cyan
-    $DefConn = Get-ItemPropertyValue -Path $Pathx64 -Name DefaultConnectionSettings -ErrorAction Stop
-    ConvertFrom-ProxySettingsBinary $DefConn
-}
-catch
-{
-    Write-Host "Proxy settings not existing or insufficient permission`n"
-}
-if ($IncludeWOW64)
-{
-    try
+
+    if ((Test-Path $Pathx86) -and $IncludeWOW64)
     {
-        $Pathx86 = 'HKLM:' + $Keyx86
-        Write-Host "    DefaultConnectionSettings of Machine" -ForegroundColor Cyan
-        Write-Host "    $Pathx86" -ForegroundColor DarkCyan
-        $DefConn = Get-ItemPropertyValue -Path $Pathx86 -Name DefaultConnectionSettings -ErrorAction Stop
-        ConvertFrom-ProxySettingsBinary $DefConn
+        try { $Data = Get-ItemPropertyValue -Path $Pathx86 -Name 'DefaultConnectionSettings' -ErrorAction Stop } catch { $Data = $null }
+        if ($null -ne $Data) 
+        {
+            $UserRegs += @{
+                Path = $Pathx86 + '\DefaultConnectionSettings'
+                Data = $Data
+            }
+        }
+
+        if ($IncludeSavedLegacySettings)
+        {
+            try { $Data = Get-ItemPropertyValue -Path $Pathx86 -Name 'SavedLegacySettings' -ErrorAction Stop } catch { $Data = $null }
+            if ($null -ne $Data) 
+            {
+                $UserRegs += @{
+                    Path = $Pathx86 + '\SavedLegacySettings'
+                    Data = $Data
+                }
+            }
+        }
+
+        if ($IncludeVPN)
+        {
+            $Conns = (Get-Item $Pathx86).Property | Where-Object { $_ -notin @('DefaultConnectionSettings', 'SavedLegacySettings') }
+            foreach ($Conn in $Conns)
+            {
+                try { $Data = Get-ItemPropertyValue -Path $Pathx86 -Name $Conn -ErrorAction Stop } catch { $Data = $null }
+                if ($null -ne $Data) 
+                {
+                    $UserRegs += @{
+                        Path = $Pathx86 + '\' + $Conn
+                        Data = $Data
+                    }
+                }
+            }
+        }
     }
-    catch
+
+    PrintIERegs $UserRegs
+}
+
+#endregion
+
+#region WinINET | REG | Machine
+
+Write-Host "    WinINET Registry of Machine" -ForegroundColor Cyan
+$MachineRegs = @()
+$Pathx64 = 'HKLM:' + $Keyx64
+$Pathx86 = 'HKLM:' + $Keyx86
+if (Test-Path $Pathx64)
+{
+    try { $Data = Get-ItemPropertyValue -Path $Pathx64 -Name 'DefaultConnectionSettings' -ErrorAction Stop } catch { $Data = $null }
+    if ($null -ne $Data) 
     {
-        Write-Host "Proxy settings not existing or insufficient permission`n"
+        $MachineRegs += @{
+            Path = $Pathx64 + '\DefaultConnectionSettings'
+            Data = $Data
+        }
+    }
+
+    if ($IncludeSavedLegacySettings)
+    {
+        try { $Data = Get-ItemPropertyValue -Path $Pathx64 -Name 'SavedLegacySettings' -ErrorAction Stop } catch { $Data = $null }
+        if ($null -ne $Data) 
+        {
+            $MachineRegs += @{
+                Path = $Pathx64 + '\SavedLegacySettings'
+                Data = $Data
+            }
+        }
+    }
+
+    if ($IncludeVPN)
+    {
+        $Conns = (Get-Item $Pathx64).Property | Where-Object { $_ -notin @('DefaultConnectionSettings', 'SavedLegacySettings', 'WinHttpSettings') }
+        foreach ($Conn in $Conns)
+        {
+            try { $Data = Get-ItemPropertyValue -Path $Pathx64 -Name $Conn -ErrorAction Stop } catch { $Data = $null }
+            if ($null -ne $Data) 
+            {
+                $MachineRegs += @{
+                    Path = $Pathx64 + '\' + $Conn
+                    Data = $Data
+                }
+            }
+        }
     }
 }
 
+if ((Test-Path $Pathx86) -and $IncludeWOW64)
+{
+    try { $Data = Get-ItemPropertyValue -Path $Pathx86 -Name 'DefaultConnectionSettings' -ErrorAction Stop } catch { $Data = $null }
+    if ($null -ne $Data) 
+    {
+        $MachineRegs += @{
+            Path = $Pathx86 + '\DefaultConnectionSettings'
+            Data = $Data
+        }
+    }
+
+    if ($IncludeSavedLegacySettings)
+    {
+        try { $Data = Get-ItemPropertyValue -Path $Pathx86 -Name 'SavedLegacySettings' -ErrorAction Stop } catch { $Data = $null }
+        if ($null -ne $Data) 
+        {
+            $MachineRegs += @{
+                Path = $Pathx86 + '\SavedLegacySettings'
+                Data = $Data
+            }
+        }
+    }
+
+    if ($IncludeVPN)
+    {
+        $Conns = (Get-Item $Pathx86).Property | Where-Object { $_ -notin @('DefaultConnectionSettings', 'SavedLegacySettings', 'WinHttpSettings') }
+        foreach ($Conn in $Conns)
+        {
+            try { $Data = Get-ItemPropertyValue -Path $Pathx86 -Name $Conn -ErrorAction Stop } catch { $Data = $null }
+            if ($null -ne $Data) 
+            {
+                $UserRegs += @{
+                    Path = $Pathx86 + '\' + $Conn
+                    Data = $Data
+                }
+            }
+        }
+    }
+}
+
+PrintIERegs $MachineRegs
+
+#endregion
+
+#region WinHTTP | API | Default
 
 Write-Host "`nWinHTTP Default Proxy" -ForegroundColor Blue
 $WinHttpDefaultProxyInfo = New-Object WINHTTP_PROXY_INFO
@@ -514,6 +682,10 @@ else
     "    Win32 Call: WinHttpGetDefaultProxyConfiguration Failed. Error Code: $ErrorCode  ($([WinHTTP]::ErrorMessage[$ErrorCode]))`n"
 }
 
+#endregion
+
+#region WinHTTP | API | WPAD
+
 Write-Host "`nAuto Proxy" -ForegroundColor Blue
 $WpadAddr = ""
 $AutoProxyAvailable = $false
@@ -522,7 +694,7 @@ if ([WinHttp]::WinHttpDetectAutoProxyConfigUrl([AutoDetectFlag]::WINHTTP_AUTO_DE
     $AutoProxyAvailable = $true
     "    DHCP WPAD Address: $WpadAddr"
     
-    if ($SaveScript)
+    if ($DownloadPacScript)
     {
         Write-Host "    Downloading Script..." -ForegroundColor Green
         try
@@ -533,7 +705,6 @@ if ([WinHttp]::WinHttpDetectAutoProxyConfigUrl([AutoDetectFlag]::WINHTTP_AUTO_DE
         catch
         {
             Write-Host "    Failed to download script file" -ForegroundColor Red
-            $Error[0]
         }
     }
 }
@@ -547,7 +718,7 @@ if ([WinHttp]::WinHttpDetectAutoProxyConfigUrl([AutoDetectFlag]::WINHTTP_AUTO_DE
     $AutoProxyAvailable = $true
     "    DNS WPAD Address: $WpadAddr"
 
-    if ($SaveScript)
+    if ($DownloadPacScript)
     {
         Write-Host "    Downloading Script..." -ForegroundColor Green
         try
@@ -558,7 +729,6 @@ if ([WinHttp]::WinHttpDetectAutoProxyConfigUrl([AutoDetectFlag]::WINHTTP_AUTO_DE
         catch
         {
             Write-Host "    Failed to download script file" -ForegroundColor Red
-            $Error[0]
         }
     }
 }
@@ -567,6 +737,10 @@ else
     $ErrorCode = [System.Runtime.InteropServices.Marshal]::GetLastWin32Error()
     "    No DNS WPAD Detected. Code: $ErrorCode ($([WinHTTP]::ErrorMessage[$ErrorCode]))"
 }
+
+#endregion
+
+#region WinHTTP | REG | WPAD Disabled
 
 try 
 {
@@ -601,6 +775,10 @@ else
 {
     Write-Host "    WPAD disabled by HKLM\SOFTWARE\Policies\Microsoft\Windows\CurrentVersion\Internet Settings\WinHttp\DisableWpad" -ForegroundColor Red
 }
+
+#endregion
+
+#region WinHTTP | API | WinHttpGetProxyForUrl
 
 if ($Url.Length -gt 0)
 {
@@ -681,29 +859,20 @@ if ($Url.Length -gt 0)
     }
 }
 
-Write-Host "`nEnvironment Variables (for libcurl)" -ForegroundColor Blue
-Write-Host '    http_proxy' -ForegroundColor Cyan
-Write-Host "    User    : $([Environment]::GetEnvironmentVariable('http_proxy', [EnvironmentVariableTarget]::User))"
-Write-Host "    Machine : $([Environment]::GetEnvironmentVariable('http_proxy', [EnvironmentVariableTarget]::Machine))"
-Write-Host "    Process : $([Environment]::GetEnvironmentVariable('http_proxy', [EnvironmentVariableTarget]::User))"
+#endregion
 
-Write-Host '    HTTPS_PROXY' -ForegroundColor Cyan
-Write-Host "    User    : $([Environment]::GetEnvironmentVariable('HTTPS_PROXY', [EnvironmentVariableTarget]::User))"
-Write-Host "    Machine : $([Environment]::GetEnvironmentVariable('HTTPS_PROXY', [EnvironmentVariableTarget]::Machine))"
-Write-Host "    Process : $([Environment]::GetEnvironmentVariable('HTTPS_PROXY', [EnvironmentVariableTarget]::User))"
+#region Extra | ENV
 
-Write-Host '    FTP_PROXY' -ForegroundColor Cyan
-Write-Host "    User    : $([Environment]::GetEnvironmentVariable('FTP_PROXY', [EnvironmentVariableTarget]::User))"
-Write-Host "    Machine : $([Environment]::GetEnvironmentVariable('FTP_PROXY', [EnvironmentVariableTarget]::Machine))"
-Write-Host "    Process : $([Environment]::GetEnvironmentVariable('FTP_PROXY', [EnvironmentVariableTarget]::User))"
+if ($IncludeEnv)
+{
+    Write-Host "`nEnvironment Variables (for libcurl)" -ForegroundColor Blue
+    $EnvList = @('http_proxy', 'HTTPS_PROXY', 'FTP_PROXY', 'ALL_PROXY', 'NO_PROXY') # Environment Varibles are not case sensitive on Windows
+    foreach ($EnvItem in $EnvList) {
+        Write-Host "    $EnvItem" -ForegroundColor Cyan
+        Write-Host "    User    : $([Environment]::GetEnvironmentVariable($EnvItem, [EnvironmentVariableTarget]::User))"
+        Write-Host "    Machine : $([Environment]::GetEnvironmentVariable($EnvItem, [EnvironmentVariableTarget]::Machine))"
+        Write-Host
+    }
+}
 
-Write-Host '    ALL_PROXY' -ForegroundColor Cyan
-Write-Host "    User    : $([Environment]::GetEnvironmentVariable('ALL_PROXY', [EnvironmentVariableTarget]::User))"
-Write-Host "    Machine : $([Environment]::GetEnvironmentVariable('ALL_PROXY', [EnvironmentVariableTarget]::Machine))"
-Write-Host "    Process : $([Environment]::GetEnvironmentVariable('ALL_PROXY', [EnvironmentVariableTarget]::User))"
-
-Write-Host '    NO_PROXY' -ForegroundColor Cyan
-Write-Host "    User    : $([Environment]::GetEnvironmentVariable('NO_PROXY', [EnvironmentVariableTarget]::User))"
-Write-Host "    Machine : $([Environment]::GetEnvironmentVariable('NO_PROXY', [EnvironmentVariableTarget]::Machine))"
-Write-Host "    Process : $([Environment]::GetEnvironmentVariable('NO_PROXY', [EnvironmentVariableTarget]::User))"
-""
+#endregion
