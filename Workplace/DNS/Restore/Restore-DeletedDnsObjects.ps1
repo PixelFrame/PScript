@@ -7,7 +7,7 @@ param (
     $ZoneName,
 
     [Parameter(Mandatory = $true)]
-    [ValidateSet('Domain', 'Forest', 'System', 'Custom')]
+    [ValidateSet('Domain', 'Forest', 'System')]
     [string]
     $Partition,
 
@@ -20,7 +20,7 @@ param (
 
 if ($DomainName.Length -eq 0)
 {
-    Write-Verbose 'DomainName not specified, using ZoneName as DomainName'
+    Write-Host 'DomainName not specified, using ZoneName as DomainName' -ForegroundColor Yellow
     $DomainName = $ZoneName
 }
 $DomainName.Split('.') | ForEach-Object { $SearchBase += "DC=$($_)," }

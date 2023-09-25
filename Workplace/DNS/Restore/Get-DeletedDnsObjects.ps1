@@ -17,7 +17,7 @@ param (
 
 if ($DomainName.Length -eq 0)
 {
-    Write-Verbose 'DomainName not specified, using ZoneName as DomainName'
+    Write-Output 'DomainName not specified, using ZoneName as DomainName'
     $DomainName = $ZoneName
 }
 $DomainName.Split('.') | ForEach-Object { $SearchBase += "DC=$($_)," }
