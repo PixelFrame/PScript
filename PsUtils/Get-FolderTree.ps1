@@ -4,7 +4,8 @@
 param (
     [Parameter()] [string] $Path = $PSScriptRoot,
     [switch] $FileProp,
-    [switch] $DirProp
+    [switch] $DirProp,
+    [switch] $SkipHidden
 )
 
 $Script:IndentFileNosub = '    '
@@ -22,8 +23,16 @@ function GenerateTree
     
     $CurrentDir = $CurrentDir.Replace('[', '`[').Replace(']', '`]')
     $CurrentDirObj = Get-Item $CurrentDir -Force
-    $SubFiles = Get-ChildItem $CurrentDir -File -Force
-    $SubDirs = Get-ChildItem $CurrentDir -Directory -Force
+    if ($SkipHidden) 
+    {
+        $SubFiles = Get-ChildItem $CurrentDir -File
+        $SubDirs = Get-ChildItem $CurrentDir -Directory
+    }
+    else 
+    {
+        $SubFiles = Get-ChildItem $CurrentDir -File -Force
+        $SubDirs = Get-ChildItem $CurrentDir -Directory -Force
+    }
     
     switch ($DirType)
     {
