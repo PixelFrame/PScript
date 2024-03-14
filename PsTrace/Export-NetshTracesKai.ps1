@@ -40,7 +40,10 @@ foreach ($reg in $WppTraceRegs)
             $Provider = $Providers.OpenSubKey($ProviderGuid)
             $ProviderObject = New-Object Provider
             $ProviderObject.Guid = [Guid]::Parse($ProviderGuid)
-            $ProviderObject.Name = $Provider.GetValue('Name')
+            if ($null -eq $Provider.GetValue('Name'))
+            { $ProviderObject.Name = 'N/A' }
+            else
+            { $ProviderObject.Name = $Provider.GetValue('Name').Trim() }
             $ProviderObject.Level = $Provider.GetValue('Level', 0xff)
             $ProviderObject.Flags = $Provider.GetValue('Keywords', -1)
             $HelperClass.Providers += $ProviderObject
@@ -89,7 +92,7 @@ function PrintHelperClass
         Out-File -InputObject $dep.Name -FilePath "$OutPath\$($class.Name).txt" -Append
         foreach ($prov in $dep.Providers)
         {
-            Out-File -InputObject "    $($prov.Guid)`t0x$($prov.Level.ToString('X'))`t0x$($prov.Flags.ToString('X'))`t$($prov.Name)" -FilePath "$OutPath\$($class.Name).txt" -Append
+            Out-File -InputObject "    $($prov.Guid)`t0x$($prov.Level.ToString('X2'))`t0x$($prov.Flags.ToString('X8'))`t$($prov.Name)" -FilePath "$OutPath\$($class.Name).txt" -Append
         }
     }
 }
