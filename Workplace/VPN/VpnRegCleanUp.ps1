@@ -1,29 +1,56 @@
+# This Alternative script is for PowerShell running under 32bit to remove the registries in 64bit
+
 $ProfileName = 'VirtLab AlwaysOnVPN'
 $ProfileNameEscaped = $ProfileName -replace ' ', '%20'
-$SearchPattern = '*/Vendor/MSFT/VPNv2/' + $ProfileNameEscaped
-$RegPath = 'HKLM:\SOFTWARE\Microsoft\EnterpriseResourceManager\Tracked\*\*\*'
-'[DEBUG]: '
-'Search Pattern:' + $SearchPattern
-'RegPath:' + $RegPath
+$SearchKeyword = '/Vendor/MSFT/VPNv2/' + $ProfileNameEscaped
+$RegPath = 'HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\EnterpriseResourceManager\Tracked'
 
-$RegItems = Get-Item -Path $RegPath
+$QueryResult = REG.EXE QUERY $RegPath /f $SearchKeyword /s /d /t REG_SZ /reg:64                  # Force querying 64 bit registry
 
-'[DEBUG]: Registries found'
-$RegItems
+<# 
+'[DEBUG] PRINTING QUERY RESULT'
+'**************************************************************'
+$QueryResult
+'**************************************************************'
+#>
 
-foreach ($RegItem in $RegItems)
+$IsFoundKey = $false
+$Key = ''
+$Property = ''
+$PendingRemoval = @()
+
+foreach ($line in $QueryResult)
 {
-    '[DEBUG]: Now Processing: ' + $RegItem
-    $RegItem.Property | ForEach-Object {
-        if ($RegItem.GetValue($_) -like $SearchPattern)
+    
+    if ($IsFoundKey)
+    {
+        if ($line -eq '')
         {
-            $CurrentRegPath = $RegItem.Name.Replace('HKEY_LOCAL_MACHINE', 'HKLM:')
-            Remove-ItemProperty -Name $_ -Path $CurrentRegPath
-            '[DEBUG]: Removed!'
+            $IsFoundKey = $false
+            continue
         }
-        else
-        {
-            '[DEBUG]: Not matching, skipped'
+        $Property = $line.Trim().Split(' ')[0]
+        $PendingRemoval += [PSCustomObject]@{
+            Key      = $Key;
+            Property = $Property;
         }
     }
+    if ($line.contains($RegPath))
+    {
+        $IsFoundKey = $true
+        $Key = $line
+    }
+}
+
+<# 
+'[DEBUG] PRINTING REMOVAL LIST'
+'**************************************************************'
+$PendingRemoval
+'**************************************************************'
+#>
+
+foreach ($removalItem in $PendingRemoval)
+{
+    'Now Removing ' + $removalItem.Property + ' @ ' + $removalItem.Key
+    # REG.EXE DELETE $removalItem.Key /v $removalItem.Property /f /reg:64
 }

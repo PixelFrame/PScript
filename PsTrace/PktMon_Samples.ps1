@@ -3,34 +3,34 @@
 
 ## Capture
 
-# Single file in circular mode
-PktMon.exe start -c -f $Env:SystemDrive\PktCap\NetTracePM.etl -m circular -s 2048
+# Single file in circular mode
+PktMon.exe start -c -f $Env:SystemDrive\PktCap\NetTracePM.etl -m circular -s 2048
 
-# Multiple files
-pktmon.exe start -c -f $Env:SystemDrive\PktCap\NetTracePMChn.etl -m multi-file -s 1024
+# Multiple files
+pktmon.exe start -c -f $Env:SystemDrive\PktCap\NetTracePMChn.etl -m multi-file -s 1024
 
 # High Performance
 #! Using memory for capture buffer
-pktmon.exe start -c -f $Env:SystemDrive\PktMonCap\NetTracePM.etl -m memory -s 1024
+pktmon.exe start -c -f $Env:SystemDrive\PktMonCap\NetTracePM.etl -m memory -s 1024
 
-# Packet capture with TCP/IP providers
-PktMon.exe start -c -t `
-    -p '{eb004a05-9b1a-11d4-9123-0050047759bc}' -k 0x3ffff -l 0xff `
-    -p '{e53c6823-7bb8-44bb-90dc-3f86090d48a6}' -k 0x800000000000003f  -l 0xff `
-    -p '{2f07e2ee-15db-40f1-90ef-9d7ba282188a}' -k 0x80007fff000000ff  -l 0xff `
-    -f $Env:SystemDrive\NetTrace_w_TCPIP.etl -s 2048
+# Packet capture with TCP/IP providers
+PktMon.exe start -c -t `
+    -p '{eb004a05-9b1a-11d4-9123-0050047759bc}' -k 0x3ffff -l 0xff `
+    -p '{e53c6823-7bb8-44bb-90dc-3f86090d48a6}' -k 0x800000000000003f  -l 0xff `
+    -p '{2f07e2ee-15db-40f1-90ef-9d7ba282188a}' -k 0x80007fff000000ff  -l 0xff `
+    -f $Env:SystemDrive\NetTrace_w_TCPIP.etl -s 2048
 
 # Verbose
-PktMon.exe start -c `
+PktMon.exe start -c `
     --flags 0x31 `
     -t `
-    -p '{eb004a05-9b1a-11d4-9123-0050047759bc}' -k 0x3ffff -l 0xff `
-    -p '{e53c6823-7bb8-44bb-90dc-3f86090d48a6}' -k 0x800000000000003f  -l 0xff `
-    -p '{2f07e2ee-15db-40f1-90ef-9d7ba282188a}' -k 0x80007fff000000ff  -l 0xff `
-    -f $Env:SystemDrive\NetTrace_w_TCPIP_verbose.etl -s 2048
+    -p '{eb004a05-9b1a-11d4-9123-0050047759bc}' -k 0x3ffff -l 0xff `
+    -p '{e53c6823-7bb8-44bb-90dc-3f86090d48a6}' -k 0x800000000000003f  -l 0xff `
+    -p '{2f07e2ee-15db-40f1-90ef-9d7ba282188a}' -k 0x80007fff000000ff  -l 0xff `
+    -f $Env:SystemDrive\NetTrace_w_TCPIP_verbose.etl -s 2048
 
-# Counter Only. No capture file will be generated.
-PktMon.exe start -o
+# Counter Only. No capture file will be generated.
+PktMon.exe start -o
 
 ## Filter
 

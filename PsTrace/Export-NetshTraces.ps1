@@ -1,82 +1,127 @@
-function CreateScenario
-{
-    param (
-        $Scenario,
-        [ref] $RefScenarioObjects
-    )
+[CmdletBinding()]
+param (
+    [Parameter()]
+    [string]
+    $OutPath = '.\NetshTraces'
+)
 
-    $ScenarioName = $Scenario.Name.Substring($Scenario.Name.LastIndexOf('\') + 1)
-    if ($RefScenarioObjects.Value.Contains($ScenarioName))
-    {
-        return
-    }
-    $Providers = $Scenario.OpenSubKey('Providers')
-    $Dependencies = $Scenario.OpenSubKey('Dependencies')
+class Provider
+{
+    [string] $Name;
+    [Guid] $Guid;
+    [int] $Level;
+    [long] $Flags;
+}
+
+class HelperClass 
+{
+    [string] $Name;
+    [HelperClass[]] $Dependencies;
+    [Provider[]] $Providers;
+}
+
+$HelperClasses = @()
+
+$WppTraceReg = 'HKLM:\SYSTEM\CurrentControlSet\Control\NetDiagFx\Microsoft\HostDLLs\*\HelperClasses\*'
+$WppTraceRegs = Get-ChildItem $WppTraceReg
+
+foreach ($reg in $WppTraceRegs)
+{
+    $HelperClass = New-Object HelperClass
+    $HelperClass.Name = $reg.Name.Substring($reg.Name.LastIndexOf('\') + 1)
+    $HelperClass.Providers = @()
+
+    $Providers = $reg.OpenSubKey('Providers')
     if ($null -ne $Providers)
     {
         $ProviderGuids = $Providers.GetSubKeyNames()
-        $ProviderObjects = New-Object System.Collections.Hashtable
         foreach ($ProviderGuid in $ProviderGuids)
         {
             $Provider = $Providers.OpenSubKey($ProviderGuid)
-            $ProviderObjects[$ProviderGuid] = [PSCustomObject]@{
-                Guid     = $ProviderGuid;
-                Keywords = '0x{0:x}' -f $Provider.GetValue('Keywords');
-                Level    = $Provider.GetValue('Level');
-                Name     = $Provider.GetValue('Name')
-            }
+            $ProviderObject = New-Object Provider
+            $ProviderObject.Guid = [Guid]::Parse($ProviderGuid)
+            if ($null -eq $Provider.GetValue('Name'))
+            { $ProviderObject.Name = 'N/A' }
+            else
+            { $ProviderObject.Name = $Provider.GetValue('Name').Trim() }
+            $ProviderObject.Level = $Provider.GetValue('Level', 0xff)
+            $ProviderObject.Flags = $Provider.GetValue('Keywords', -1)
+            $HelperClass.Providers += $ProviderObject
         }
-        $RefScenarioObjects.Value[$ScenarioName] = $ProviderObjects
     }
-    else
-    {
-        $RefScenarioObjects.Value[$ScenarioName] = New-Object System.Collections.Hashtable
-    }
+
+    $HelperClasses += $HelperClass
+}
+
+for ($i = 0; $i -lt $HelperClasses.Count; $i++)
+{
+    $reg = $WppTraceRegs[$i]
+    $HelperClass = $HelperClasses[$i]
+
+    $Dependencies = $reg.OpenSubKey('Dependencies')
     if ($null -ne $Dependencies)
     {
         $DependencyNames = $Dependencies.GetValueNames()
         foreach ($DependencyName in $DependencyNames)
         {
-            if (!$RefScenarioObjects.Value.Contains($DependencyName))
+            $Dependency = $HelperClasses | Where-Object { $_.Name -eq $DependencyName }
+            if ($null -eq $Dependency)
             {
-                $Dependency = Get-Item "HKLM:\SYSTEM\CurrentControlSet\Control\NetDiagFx\Microsoft\HostDLLs\*\HelperClasses\$DependencyName"
-                if ($null -eq $Dependency)
-                {
-                    "Inexistent Scenario: $DependencyName"
-                    continue
-                }
-                else
-                {
-                    CreateScenario -Scenario $Dependency -RefScenarioObjects ([ref]$RefScenarioObjects.Value)
-                }
+                "Inexistent Scenario: $DependencyName"
+                continue
             }
-            $RefScenarioObjects.Value[$DependencyName].GetEnumerator() | ForEach-Object {
-                if (!$RefScenarioObjects.Value[$ScenarioName].Contains($_.Name))
-                {
-                    $RefScenarioObjects.Value[$ScenarioName][$_.Name] = $_.Value
-                }
+            else
+            {
+                $HelperClass.Dependencies += $Dependency
             }
         }
     }
 }
 
-$WppTraceReg = 'HKLM:\SYSTEM\CurrentControlSet\Control\NetDiagFx\Microsoft\HostDLLs\*\HelperClasses\*'
-$Scenarios = Get-ChildItem $WppTraceReg
-
-$ScenarioObjects = New-Object System.Collections.Hashtable
-foreach ($Scenario in $Scenarios)
+# IDK why ref is just not working here, but global varible is so simple, so **** off ref
+function PrintHelperClass
 {
-    CreateScenario -Scenario $Scenario -RefScenarioObjects ([ref]$ScenarioObjects)
-}
-
-$ScenarioObjects.GetEnumerator() | ForEach-Object {
-    'Scenario: ' + $_.Name + "`n"
-    if ($_.Value.Count -gt 0)
-    { 
-        $_.Value.GetEnumerator() | ForEach-Object {
-            $_.Value
+    param (
+        [HelperClass] $class
+    )
+    
+    $Script:AllDependecies = @()
+    GetAllDependencies -class $class
+    foreach ($dep in $Script:AllDependecies)
+    {
+        Out-File -InputObject $dep.Name -FilePath "$OutPath\$($class.Name).txt" -Append
+        foreach ($prov in $dep.Providers)
+        {
+            Out-File -InputObject "    $($prov.Guid)`t0x$($prov.Level.ToString('X2'))`t0x$($prov.Flags.ToString('X8'))`t$($prov.Name)" -FilePath "$OutPath\$($class.Name).txt" -Append
         }
     }
-    else { 'No provider for this scenario' }
-    '-----------------------------------------------------------'
+}
+
+function GetAllDependencies()
+{
+    param (
+        [HelperClass] $class
+    )
+
+    $Script:AllDependecies += $class
+    if ($null -ne $class.Dependencies)
+    {
+        foreach ($dependency in $class.Dependencies)
+        {
+            if ($Script:AllDependecies -notcontains $dependency -and $dependency.Providers.Count -gt 0)
+            {
+                GetAllDependencies -class $dependency
+            }
+        }
+    }
+}
+
+if (![System.IO.Directory]::Exists($OutPath))
+{
+    [System.IO.Directory]::CreateDirectory($OutPath)
+}
+foreach ($hc in $HelperClasses)
+{
+    Write-Host "Exporting $($hc.Name)"
+    PrintHelperClass -class $hc
 }
