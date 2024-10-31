@@ -1,13 +1,35 @@
 # Converts data in LDAP client trace to Wireshark ready HEX dump
 # Update: It appears since WS22, the LDAP client trace will be converted into JSON format with a non-standard timestamp format (yyyy/MM/dd-HH:mm:ss.fffffffff)
+# Update#2: Support calling netsh trace convert and text2pcap, so that we don't need manual operations
 
 [CmdletBinding()]
 param (
-    [Parameter(Mandatory = $true)]
-    [string] $LdapEtw,
-
-    [switch] $DecryptedOnly
+    [Parameter()]    [string] $LdapEtw,
+    [switch] $DecryptedOnly,
+    [switch] $CallText2Pcap,
+    [Parameter()] [string] $Text2PcapPath = "C:\Program Files\Wireshark\text2pcap.exe",
+    [Parameter()] [string] $SrcAddress = "10.1.1.1",
+    [Parameter()] [string] $DstAddress = "10.1.1.2",
+    [Parameter()] [string] $SrcPort = "12345",
+    [Parameter()] [string] $DstPort = "389"
 )
+
+try
+{
+    $LdapEtwObj = Get-Item $LdapEtw -ErrorAction Stop
+}
+catch 
+{
+    $_
+    exit
+}
+Push-Location $LdapEtwObj.Directory
+
+if ($LdapEtwObj.Extension -eq '.etl')
+{
+    netsh trace convert "$($LdapEtwObj.FullName)" overwrite=yes
+    $LdapEtw = $LdapEtwObj.BaseName + '.txt'
+}
 
 $EtwLineRegex = '\[\d+\][\dA-F]{4}\.[\dA-F]{4}::(?<Time>\u200e?\d{4}\u200e?\W\u200e?\d{2}\u200e?\W\u200e?\d{2}\W\d{2}:\d{2}:\d{2}\.\d+) \[Microsoft-Windows-LDAP-Client\](?<Message>.*)'
 $HexDumpRegex = '(?<HEX>[\da-f]{2} )+ (?<ASCII>.+)'
@@ -20,7 +42,7 @@ $EndDecryptedSectionMark = 'End of Unencrypted dump of (send|receive) buffer.'
 $FrameCount = 0
 $LineCount = 0
 $LdapEtwContent = Get-Content $LdapEtw
-$Output = $LdapEtw + '.hex'
+$Output = $LdapEtwObj.BaseName + '.hex'
 $Index = 0
 $IsInHexSection = $false
 $CurrentDirection = ''
@@ -80,3 +102,12 @@ foreach ($line in $LdapEtwContent)
         }
     }
 }
+
+if ($CallText2Pcap)
+{
+    $PcapOutput = $LdapEtwObj.BaseName + '.pcapng'
+    $Text2PcapParams = "-i 6", "-T $SrcPort,$DstPort", "-t %Y-%m-%d %H:%M:%S.%f", "-D", "$Output", "$PcapOutput"
+    & $Text2PcapPath $Text2PcapParams
+    Remove-Item $Output
+}
+Pop-Location
