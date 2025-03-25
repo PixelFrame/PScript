@@ -1,12 +1,15 @@
 # Converts data in LDAP client trace to Wireshark ready HEX dump
-# Update: It appears since WS22, the LDAP client trace will be converted into JSON format with a non-standard timestamp format (yyyy/MM/dd-HH:mm:ss.fffffffff)
-# Update#2: Support calling netsh trace convert and text2pcap, so that we don't need manual operations
+# Update #1: It appears since WS22, the LDAP client trace will be converted into JSON format with a non-standard timestamp format (yyyy/MM/dd-HH:mm:ss.fffffffff)
+# Update #2: Support calling netsh trace convert and text2pcap, so that we don't need manual operations
+# Update #3: Split large frames so that Wireshark can handle them
 
 [CmdletBinding()]
 param (
-    [Parameter()]    [string] $LdapEtw,
+    [Parameter()] [string] $LdapEtw,
     [switch] $DecryptedOnly,
     [switch] $CallText2Pcap,
+    [switch] $PreserveHexDump,
+    [Parameter()] [int] $PseudoMSS = 8960,
     [Parameter()] [string] $Text2PcapPath = "C:\Program Files\Wireshark\text2pcap.exe",
     [Parameter()] [string] $SrcAddress = "10.1.1.1",
     [Parameter()] [string] $DstAddress = "10.1.1.2",
@@ -40,11 +43,13 @@ $BeginDecryptedSectionMark = 'Unencrypted dump of Data (sent|received) on connec
 $EndDecryptedSectionMark = 'End of Unencrypted dump of (send|receive) buffer.'
 
 $FrameCount = 0
+$FramePart = 0
 $LineCount = 0
 $LdapEtwContent = Get-Content $LdapEtw
 $Output = $LdapEtwObj.BaseName + '.hex'
 $Index = 0
 $IsInHexSection = $false
+$CurrentTime = ''
 $CurrentDirection = ''
 
 Set-Content -Value ([string]::Empty) -LiteralPath $Output -NoNewline
@@ -77,26 +82,36 @@ foreach ($line in $LdapEtwContent)
                 $OutLine | Out-File -Append -Encoding ascii -LiteralPath $Output -NoNewline
                 $Index += $HexCaptures.Count
             }
+
+            # Split the frame when the frame size is too large, by default using TCP jumbo MSS (8960 bytes)
+            if($Index -ge $PseudoMSS)
+            {
+                $FramePart++
+                Out-File -Append -Encoding ascii -LiteralPath $Output -InputObject "# Frame $FrameCount part $FramePart @ Line $LineCount"
+                Out-File -Append -Encoding ascii -LiteralPath $Output -InputObject "$CurrentDirection $CurrentTime"
+                $Index = 0
+            }
         }
         else
         {
             if ($Message -match $BeginDecryptedSectionMark -or (!$DecryptedOnly -and ($Message -match $BeginDataSectionMark)) )
             {
                 $FrameCount++
-                Out-File -Append -Encoding ascii -LiteralPath $Output -InputObject "# Frame $FrameCount @ Line $LineCount"
+                $FramePart = 0
+                Out-File -Append -Encoding ascii -LiteralPath $Output -InputObject "# Frame $FrameCount part 0 @ Line $LineCount"
                 if ($IsNewLogFormat)
                 {
-                    $Time = ($RegMatch.Groups | Where-Object { $_.Name -eq 'Time' }).Value.Replace('-', ' ').Replace('/', '-')
+                    $CurrentTime = ($RegMatch.Groups | Where-Object { $_.Name -eq 'Time' }).Value.Replace('-', ' ').Replace('/', '-')
                 }
                 else
                 {
-                    $Time = ($RegMatch.Groups | Where-Object { $_.Name -eq 'Time' }).Value -replace '\u200e'
+                    $CurrentTime = ($RegMatch.Groups | Where-Object { $_.Name -eq 'Time' }).Value -replace '\u200e'
                 }
                 if ($Message.Contains('sent')) { $CurrentDirection = 'O' }
                 else { $CurrentDirection = 'I' }
                 $IsInHexSection = $true
                 $Index = 0
-                Out-File -Append -Encoding ascii -LiteralPath $Output -InputObject "$CurrentDirection $Time"
+                Out-File -Append -Encoding ascii -LiteralPath $Output -InputObject "$CurrentDirection $CurrentTime"
                 continue
             }
         }
@@ -106,8 +121,17 @@ foreach ($line in $LdapEtwContent)
 if ($CallText2Pcap)
 {
     $PcapOutput = $LdapEtwObj.BaseName + '.pcapng'
-    $Text2PcapParams = "-i 6", "-T $SrcPort,$DstPort", "-t %Y-%m-%d %H:%M:%S.%f", "-D", "$Output", "$PcapOutput"
+    $Text2PcapParams = "-i 6", "-T $DstPort,$SrcPort", "-t %Y-%m-%d %H:%M:%S.%f", "-D", "$Output", "$PcapOutput"
+    if(!(Test-Path($Text2PcapPath)))
+    {
+        Write-Error "text2pcap not found at $Text2PcapPath"
+        Pop-Location
+        exit
+    }
     & $Text2PcapPath $Text2PcapParams
-    Remove-Item $Output
+    if (!$PreserveHexDump)
+    {
+        Remove-Item $Output
+    }
 }
 Pop-Location
