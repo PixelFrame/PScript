@@ -84,7 +84,7 @@ foreach ($line in $LdapEtwContent)
             }
 
             # Split the frame when the frame size is too large, by default using TCP jumbo MSS (8960 bytes)
-            if($Index -ge $PseudoMSS)
+            if ($Index -ge $PseudoMSS)
             {
                 $FramePart++
                 Out-File -Append -Encoding ascii -LiteralPath $Output -InputObject "# Frame $FrameCount part $FramePart @ Line $LineCount"
@@ -121,14 +121,28 @@ foreach ($line in $LdapEtwContent)
 if ($CallText2Pcap)
 {
     $PcapOutput = $LdapEtwObj.BaseName + '.pcapng'
-    $Text2PcapParams = "-i 6", "-T $DstPort,$SrcPort", "-t %Y-%m-%d %H:%M:%S.%f", "-D", "$Output", "$PcapOutput"
-    if(!(Test-Path($Text2PcapPath)))
+    
+    $Text2PcapParams = '-i 6', "-T $DstPort,$SrcPort", "-4 $DstAddress,$SrcAddress", '-t "%Y-%m-%d %H:%M:%S.%f"', "-D ""$Output"" ""$PcapOutput""" -join ' '
+    if (!(Test-Path($Text2PcapPath)))
     {
         Write-Error "text2pcap not found at $Text2PcapPath"
         Pop-Location
         exit
     }
-    & $Text2PcapPath $Text2PcapParams
+    $Text2PcapProcInfo = New-Object System.Diagnostics.ProcessStartInfo
+    $Text2PcapProcInfo.FileName = $Text2PcapPath
+    $Text2PcapProcInfo.Arguments = $Text2PcapParams
+    $Text2PcapProcInfo.RedirectStandardOutput = $true
+    $Text2PcapProcInfo.RedirectStandardError = $true
+    $Text2PcapProcInfo.UseShellExecute = $false
+    $Text2PcapProcInfo.CreateNoWindow = $true
+    $Text2PcapProcInfo.WorkingDirectory = $PWD.Path
+
+    $Text2PcapProc = [System.Diagnostics.Process]::Start($Text2PcapProcInfo)
+    $Text2PcapProc.WaitForExit()
+    $Text2PcapProc.StandardOutput.ReadToEnd()
+    $Text2PcapProc.StandardError.ReadToEnd()
+
     if (!$PreserveHexDump)
     {
         Remove-Item $Output
